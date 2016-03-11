@@ -3527,6 +3527,15 @@ struct GenericZero(TParseTree)
     static void forgetMemo()
     {
         memo = null;
+						blockMemo_TableIndex_atPos.length = 0;
+						blockMemo_PostExpr_atPos.length = 0;
+						blockMemo_ArrayIndex_atPos.length = 0;
+						blockMemo_CallExpr_atPos.length = 0;
+						blockMemo_MemberCall_atPos.length = 0;
+						blockMemo_OrExpr_atPos.length = 0;
+						blockMemo_AndExpr_atPos.length = 0;
+						blockMemo_AddExpr_atPos.length = 0;
+						blockMemo_MulExpr_atPos.length = 0;
     }
     }
 }

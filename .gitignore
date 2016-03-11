@@ -18,3 +18,7 @@
 .dub
 docs.json
 __dummy.html
+*.bak
+Debug/
+Release/
+.vs

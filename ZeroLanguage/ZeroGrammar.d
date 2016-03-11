@@ -1,0 +1,131 @@
+import pegged.grammar;
+
+int main(string[] argv)
+{
+	enum zeroGrammar = `
+	Zero:
+
+		### Statement ###
+
+		Program < Statement* eoi
+		Statement <- NonEmptyStatement / EmptyStatement
+		EmptyStatement < :';'
+		NonEmptyStatement < BlockStatement / 
+			VarStatement / 
+			ConstStatement /
+			FunctionStatement / 
+			IfStatement / 
+			WhileStatement / 
+			RepeatStatement / 
+			ForStatement / 
+			ForeachStatement /  
+			ReturnStatement / 
+			BreakStatement / 
+			ContinueStatement / 
+			ExpressionStatement 
+		BlockStatement < :'{' Statement* :'}'
+		IfStatement < :'if' :'(' Expression :')' Statement ( :'else' Statement )?
+		WhileStatement < :'while' :'(' Expression :')' Statement
+		RepeatStatement < :'repeat' Statement :'until' :'(' Expression :')' :';'
+		ForStatement < :'for' :'(' Initialize Expression? :';' Increment? :')' Statement
+		Initialize < Statement
+		Increment < Expression
+		ForeachStatement < :'foreach' :'(' :'var' VarIdentifier :';' Expression :')' Statement
+		ReturnStatement < :'return' Expression? :';'
+		BreakStatement < :'break' :';'
+		ContinueStatement < :'continue' :';'
+		ExpressionStatement < Expression :';'
+		VarStatement < ^'global'? :'var' VarDeclarationList :';'
+		VarDeclarationList < VarExpression (:',' VarExpression)*
+		VarExpression < VarDeclaration (:':=' Expression)?
+		VarDeclaration <- :'$' identifier
+		ConstStatement < ^'global'? :'const' ConstDeclarationList :';'
+		ConstDeclarationList < ConstDeclaration (:',' ConstDeclaration)*
+		ConstDeclaration < Identifier :':=' Expression
+		FunctionStatement < :'function' identifier Parameters FunctionAttribute* Statement
+		Parameters < :'(' ParameterList? :')'
+		ParameterList < '…' / Parameter (:',' Parameter)*
+		Parameter < :'var' VarExpression
+		FunctionAttribute < 'override'
+
+		### Expression ###
+
+		Expression < AssignExpr
+		AssignExpr < TernaryExpr ( :':=' TernaryExpr )?
+		TernaryExpr < OrExpr ( :'?' TernaryExpr :':' TernaryExpr )?
+		OrExpr < (OrExpr :'or')? AndExpr
+		AndExpr < (AndExpr :'and')? CompareExpr
+		CompareExpr < AddExpr (CompareOp AddExpr)?
+		CompareOp <- '<=' / '<' / '=' / '!=' / '>=' / '>' / 'in' / '!in'
+		AddExpr < (AddExpr AddOp)? MulExpr
+		AddOp < '+' / '-' / '~'
+		MulExpr < (MulExpr MulOp)? UnaryExpr
+		MulOp < '*' / '/' / '%'
+		UnaryExpr < NotExpr / PowExpr / SignExpr
+		NotExpr < :'not' UnaryExpr
+		SignExpr < Sign UnaryExpr
+		PowExpr < PostExpr (:'^' UnaryExpr)?
+		PostExpr < TableIndex / ArrayIndex / CallExpr / MemberCall / PrimaryExpr
+		MemberCall <- PostExpr :'.' identifier
+		TableIndex < PostExpr :'{' Expression :'}'
+		ArrayIndex < PostExpr :'[' Expression :']'
+		CallExpr < PostExpr :'(' Argument? :')'
+		Argument < Expression (:',' Expression)*
+		PrimaryExpr < :'(' Expression :')' / 
+			ArrayExpr / 
+			TableExpr / 
+			ConstExpr /
+			RealLiteral / 
+			IntegerLiteral / 
+			String / 
+			VarIdentifier / 
+			This / 
+			Null / 
+			True / 
+			False / 
+			Lambda
+		ArrayExpr < :'[' ArrayElement? :','? :']'
+		ArrayElement < Expression (:',' Expression)*
+		TableExpr < :'{' TableElementList? :','? :'}'
+		TableElementList < TableElement (:',' TableElementList)?
+		TableElement < TernaryExpr (:':=' Expression)? (:',' TableElement)?
+		ConstExpr < Identifier
+		VarIdentifier <- :'$' identifier
+		
+		IntegerLiteral <- Binary / Hexadecimal / Decimal
+		Decimal <~ :('0'[dD])? Integer / Sign? Integer
+		Binary <~ :('0'[bB]) [01]([01] / :'\'')*
+		Hexadecimal <~ :('0'[xX]) HexDigit (HexDigit / '\'')*
+		HexDigit < [0-9a-fA-F]
+		Sign <- '+' / '-'
+		Integer <~ digit (digit / :'\'')*
+		RealLiteral <- ~(Sign? Integer '.' Integer) ([eE] ~(Sign? Integer))?
+		String < RawString / QuotedString
+		RawString <~ :backquote (!backquote .)* :backquote
+		QuotedString <~ :doublequote (DQChar)* :doublequote
+		DQChar <- EscapeSequence / !doublequote .
+		EscapeSequence <- backslash (doublequote / backslash / [nrt])
+		This < '$'
+		Null < 'null'
+		True < 'true'
+		False < 'false'
+
+		Lambda < CapturedList Parameters BlockStatement
+		CapturedList < :'<' CapturedVar? :'>'
+		CapturedVar < (RenamedVar / VarIdentifier) (:',' CapturedVar)*
+		RenamedVar < :'var' VarIdentifier :':=' Expression
+
+		Identifier <~ !Keyword [a-zA-Z_][a-zA-Z0-9_]*
+		Keyword < ('if' / 'else' / 'while' / 'repeat' / 'until' / 'for' / 'foreach' / 'break' / 
+			'continue' / 'switch' / 'case' / 'var' / 'global' / 'return' / 'function' /
+			'override' / 'null' / 'and' / 'or' / 'not' / 'true' / 'false' / 'in') ![a-zA-Z0-9_]
+		Spacing <: (blank / Comment)*
+		Comment <: BlockComment / LineComment
+		BlockComment <~ :'/*' (!'*/' .)* :'*/'
+		LineComment <~ :'//' (!endOfLine .)* :endOfLine
+		`;
+
+	asModule("zero.parser", "zero/parser", zeroGrammar);
+
+    return 0;
+}

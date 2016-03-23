@@ -206,6 +206,8 @@
  </Config>
  <Folder name="Zero">
   <Folder name="zero">
+   <File path="zero\allocator.d" />
+   <File path="zero\analyzer.d" />
    <File path="zero\generator.d" />
    <File path="zero\parser.d" />
   </Folder>

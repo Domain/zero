@@ -1,15 +1,27 @@
 import pegged.grammar;
 
+
+
 int main(string[] argv)
 {
+    enum semanticActions = 
+`T simplify(T)(T node)
+{
+    if (node.children.length == 1)
+    {
+        return node.children[0];
+    }
+    return node;
+}`;
+
 	enum zeroGrammar = `
 	Zero:
 
 		### Statement ###
 
-		Program < Statement* eoi
+		Program < Statement* :eoi
 		Statement <- NonEmptyStatement / EmptyStatement
-		EmptyStatement < :';'
+		EmptyStatement < ';'
 		NonEmptyStatement < BlockStatement / 
 			VarStatement / 
 			ConstStatement /
@@ -23,38 +35,38 @@ int main(string[] argv)
 			BreakStatement / 
 			ContinueStatement / 
 			ExpressionStatement 
-		BlockStatement < :'{' Statement* :'}'
+		BlockStatement < '{' Statement* '}'
 		IfStatement < :'if' :'(' Expression :')' Statement ( :'else' Statement )?
 		WhileStatement < :'while' :'(' Expression :')' Statement
 		RepeatStatement < :'repeat' Statement :'until' :'(' Expression :')' :';'
-		ForStatement < :'for' :'(' Initialize Expression? :';' Increment? :')' Statement
+		ForStatement < :'for' :'(' ForExpression :')' Statement
+        ForExpression < Initialize Expression :';' Increment?
 		Initialize < Statement
 		Increment < Expression
-		ForeachStatement < :'foreach' :'(' :'var' VarIdentifier :';' Expression :')' Statement
-		ReturnStatement < :'return' Expression? :';'
-		BreakStatement < :'break' :';'
-		ContinueStatement < :'continue' :';'
+		ForeachStatement < :'foreach' :'(' :'var' VarIdentifier :';' ForeachRange :')' Statement
+        ForeachRange < Expression ('..' Expression)?
+		ReturnStatement < 'return' Expression? :';'
+		BreakStatement < 'break' :';'
+		ContinueStatement < 'continue' :';'
 		ExpressionStatement < Expression :';'
-		VarStatement < ^'global'? :'var' VarDeclarationList :';'
+		VarStatement < 'global'? :'var' VarDeclarationList :';'
 		VarDeclarationList < VarExpression (:',' VarExpression)*
 		VarExpression < VarDeclaration (:':=' Expression)?
 		VarDeclaration <- :'$' identifier
-		ConstStatement < ^'global'? :'const' ConstDeclarationList :';'
-		ConstDeclarationList < ConstDeclaration (:',' ConstDeclaration)*
-		ConstDeclaration < Identifier :':=' Expression
-		FunctionStatement < :'function' identifier Parameters FunctionAttribute* Statement
+		ConstStatement < 'global'? :'const' ConstDeclarationList :';'
 		Parameters < :'(' ParameterList? :')'
 		ParameterList < '…' / Parameter (:',' Parameter)*
 		Parameter < :'var' VarExpression
-		FunctionAttribute < 'override'
+		FunctionAttributes < FunctionAttribute*
+        FunctionAttribute <- 'override'
 
 		### Expression ###
 
 		Expression < AssignExpr
 		AssignExpr < TernaryExpr ( :':=' TernaryExpr )?
 		TernaryExpr < OrExpr ( :'?' TernaryExpr :':' TernaryExpr )?
-		OrExpr < (OrExpr :'or')? AndExpr
-		AndExpr < (AndExpr :'and')? CompareExpr
+		OrExpr < (OrExpr 'or')? AndExpr
+		AndExpr < (AndExpr 'and')? CompareExpr
 		CompareExpr < AddExpr (CompareOp AddExpr)?
 		CompareOp <- '<=' / '<' / '=' / '!=' / '>=' / '>' / 'in' / '!in'
 		AddExpr < (AddExpr AddOp)? MulExpr
@@ -64,7 +76,7 @@ int main(string[] argv)
 		UnaryExpr < NotExpr / PowExpr / SignExpr
 		NotExpr < :'not' UnaryExpr
 		SignExpr < Sign UnaryExpr
-		PowExpr < PostExpr (:'^' UnaryExpr)?
+		PowExpr < PostExpr ('^' UnaryExpr)?
 		PostExpr < TableIndex / ArrayIndex / CallExpr / MemberCall / PrimaryExpr
 		MemberCall <- PostExpr :'.' identifier
 		TableIndex < PostExpr :'{' Expression :'}'
@@ -84,9 +96,9 @@ int main(string[] argv)
 			True / 
 			False / 
 			Lambda
-		ArrayExpr < :'[' ArrayElement? :','? :']'
+		ArrayExpr < '[' ArrayElement? :','? ']'
 		ArrayElement < Expression (:',' Expression)*
-		TableExpr < :'{' TableElementList? :','? :'}'
+		TableExpr < '{' TableElementList? :','? '}'
 		TableElementList < TableElement (:',' TableElementList)?
 		TableElement < TernaryExpr (:':=' Expression)? (:',' TableElement)?
 		ConstExpr < Identifier
@@ -99,7 +111,7 @@ int main(string[] argv)
 		HexDigit < [0-9a-fA-F]
 		Sign <- '+' / '-'
 		Integer <~ digit (digit / :'\'')*
-		RealLiteral <- ~(Sign? Integer '.' Integer) ([eE] ~(Sign? Integer))?
+		RealLiteral <~ Sign? Integer '.' Integer ([eE] Sign? Integer)? / Sign? Integer [eE] Sign? Integer
 		String < RawString / QuotedString
 		RawString <~ :backquote (!backquote .)* :backquote
 		QuotedString <~ :doublequote (DQChar)* :doublequote
@@ -111,7 +123,7 @@ int main(string[] argv)
 		False < 'false'
 
 		Lambda < CapturedList Parameters BlockStatement
-		CapturedList < :'<' CapturedVar? :'>'
+		CapturedList < '<' CapturedVar? '>'
 		CapturedVar < (RenamedVar / VarIdentifier) (:',' CapturedVar)*
 		RenamedVar < :'var' VarIdentifier :':=' Expression
 
@@ -125,7 +137,7 @@ int main(string[] argv)
 		LineComment <~ :'//' (!endOfLine .)* :endOfLine
 		`;
 
-	asModule("zero.parser", "zero/parser", zeroGrammar);
+	asModule!()("zero.parser", "zero/parser", zeroGrammar, semanticActions);
 
     return 0;
 }

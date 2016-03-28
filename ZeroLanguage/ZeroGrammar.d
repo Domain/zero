@@ -54,6 +54,9 @@ int main(string[] argv)
 		VarExpression < VarDeclaration (:':=' Expression)?
 		VarDeclaration <- :'$' identifier
 		ConstStatement < 'global'? :'const' ConstDeclarationList :';'
+		ConstDeclarationList < ConstDeclaration (:',' ConstDeclaration)*
+		ConstDeclaration < Identifier :':=' Expression
+		FunctionStatement < :'function' identifier Parameters FunctionAttributes Statement
 		Parameters < :'(' ParameterList? :')'
 		ParameterList < '…' / Parameter (:',' Parameter)*
 		Parameter < :'var' VarExpression
@@ -62,8 +65,8 @@ int main(string[] argv)
 
 		### Expression ###
 
-		Expression < AssignExpr
-		AssignExpr < TernaryExpr ( :':=' TernaryExpr )?
+		Expression < AssignExpr {simplify}
+		AssignExpr <{simplify} TernaryExpr ( :':=' TernaryExpr )? 
 		TernaryExpr < OrExpr ( :'?' TernaryExpr :':' TernaryExpr )?
 		OrExpr < (OrExpr 'or')? AndExpr
 		AndExpr < (AndExpr 'and')? CompareExpr

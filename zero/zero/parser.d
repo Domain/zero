@@ -52,8 +52,8 @@ This module was automatically generated from the following grammar:
 
 		### Expression ###
 
-		Expression < AssignExpr
-		AssignExpr < TernaryExpr ( :':=' TernaryExpr )?
+		Expression < AssignExpr {simplify}
+		AssignExpr <{simplify} TernaryExpr ( :':=' TernaryExpr )? 
 		TernaryExpr < OrExpr ( :'?' TernaryExpr :':' TernaryExpr )?
 		OrExpr < (OrExpr 'or')? AndExpr
 		AndExpr < (AndExpr 'and')? CompareExpr
@@ -1450,7 +1450,7 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.wrapAround!(Spacing, AssignExpr, Spacing), "Zero.Expression")(p);
+            return         pegged.peg.defined!(pegged.peg.action!(pegged.peg.wrapAround!(Spacing, AssignExpr, Spacing), simplify), "Zero.Expression")(p);
         }
         else
         {
@@ -1458,7 +1458,7 @@ struct GenericZero(TParseTree)
                 return *m;
             else
             {
-                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.wrapAround!(Spacing, AssignExpr, Spacing), "Zero.Expression"), "Expression")(p);
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.action!(pegged.peg.wrapAround!(Spacing, AssignExpr, Spacing), simplify), "Zero.Expression"), "Expression")(p);
                 memo[tuple(`Expression`, p.end)] = result;
                 return result;
             }
@@ -1469,12 +1469,12 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.wrapAround!(Spacing, AssignExpr, Spacing), "Zero.Expression")(TParseTree("", false,[], s));
+            return         pegged.peg.defined!(pegged.peg.action!(pegged.peg.wrapAround!(Spacing, AssignExpr, Spacing), simplify), "Zero.Expression")(TParseTree("", false,[], s));
         }
         else
         {
             forgetMemo();
-            return hooked!(pegged.peg.defined!(pegged.peg.wrapAround!(Spacing, AssignExpr, Spacing), "Zero.Expression"), "Expression")(TParseTree("", false,[], s));
+            return hooked!(pegged.peg.defined!(pegged.peg.action!(pegged.peg.wrapAround!(Spacing, AssignExpr, Spacing), simplify), "Zero.Expression"), "Expression")(TParseTree("", false,[], s));
         }
     }
     static string Expression(GetName g)
@@ -1486,7 +1486,7 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, TernaryExpr, Spacing), pegged.peg.option!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(":="), Spacing)), pegged.peg.wrapAround!(Spacing, TernaryExpr, Spacing)), Spacing))), "Zero.AssignExpr")(p);
+            return         pegged.peg.defined!(pegged.peg.action!(pegged.peg.and!(TernaryExpr, pegged.peg.option!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.literal!(":=")), TernaryExpr))), simplify), "Zero.AssignExpr")(p);
         }
         else
         {
@@ -1494,7 +1494,7 @@ struct GenericZero(TParseTree)
                 return *m;
             else
             {
-                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, TernaryExpr, Spacing), pegged.peg.option!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(":="), Spacing)), pegged.peg.wrapAround!(Spacing, TernaryExpr, Spacing)), Spacing))), "Zero.AssignExpr"), "AssignExpr")(p);
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.action!(pegged.peg.and!(TernaryExpr, pegged.peg.option!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.literal!(":=")), TernaryExpr))), simplify), "Zero.AssignExpr"), "AssignExpr")(p);
                 memo[tuple(`AssignExpr`, p.end)] = result;
                 return result;
             }
@@ -1505,12 +1505,12 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, TernaryExpr, Spacing), pegged.peg.option!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(":="), Spacing)), pegged.peg.wrapAround!(Spacing, TernaryExpr, Spacing)), Spacing))), "Zero.AssignExpr")(TParseTree("", false,[], s));
+            return         pegged.peg.defined!(pegged.peg.action!(pegged.peg.and!(TernaryExpr, pegged.peg.option!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.literal!(":=")), TernaryExpr))), simplify), "Zero.AssignExpr")(TParseTree("", false,[], s));
         }
         else
         {
             forgetMemo();
-            return hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, TernaryExpr, Spacing), pegged.peg.option!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(":="), Spacing)), pegged.peg.wrapAround!(Spacing, TernaryExpr, Spacing)), Spacing))), "Zero.AssignExpr"), "AssignExpr")(TParseTree("", false,[], s));
+            return hooked!(pegged.peg.defined!(pegged.peg.action!(pegged.peg.and!(TernaryExpr, pegged.peg.option!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.literal!(":=")), TernaryExpr))), simplify), "Zero.AssignExpr"), "AssignExpr")(TParseTree("", false,[], s));
         }
     }
     static string AssignExpr(GetName g)
@@ -1570,7 +1570,8 @@ struct GenericZero(TParseTree)
                     return *m;
             auto current = fail(p);
             seed[p.end] = current;
-            blockMemo_OrExpr_atPos ~= p.end;
+            if (!blockMemo_OrExpr_atPos.canFind(p.end))
+                blockMemo_OrExpr_atPos ~= p.end;
             while (true)
             {
                 auto result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.option!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.wrapAround!(Spacing, OrExpr, Spacing), pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("or"), Spacing)), Spacing)), pegged.peg.wrapAround!(Spacing, AndExpr, Spacing)), "Zero.OrExpr"), "OrExpr")(p);
@@ -1623,7 +1624,8 @@ struct GenericZero(TParseTree)
                     return *m;
             auto current = fail(p);
             seed[p.end] = current;
-            blockMemo_AndExpr_atPos ~= p.end;
+            if (!blockMemo_AndExpr_atPos.canFind(p.end))
+                blockMemo_AndExpr_atPos ~= p.end;
             while (true)
             {
                 auto result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.option!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.wrapAround!(Spacing, AndExpr, Spacing), pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("and"), Spacing)), Spacing)), pegged.peg.wrapAround!(Spacing, CompareExpr, Spacing)), "Zero.AndExpr"), "AndExpr")(p);
@@ -1748,7 +1750,8 @@ struct GenericZero(TParseTree)
                     return *m;
             auto current = fail(p);
             seed[p.end] = current;
-            blockMemo_AddExpr_atPos ~= p.end;
+            if (!blockMemo_AddExpr_atPos.canFind(p.end))
+                blockMemo_AddExpr_atPos ~= p.end;
             while (true)
             {
                 auto result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.option!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.wrapAround!(Spacing, AddExpr, Spacing), pegged.peg.wrapAround!(Spacing, AddOp, Spacing)), Spacing)), pegged.peg.wrapAround!(Spacing, MulExpr, Spacing)), "Zero.AddExpr"), "AddExpr")(p);
@@ -1837,7 +1840,8 @@ struct GenericZero(TParseTree)
                     return *m;
             auto current = fail(p);
             seed[p.end] = current;
-            blockMemo_MulExpr_atPos ~= p.end;
+            if (!blockMemo_MulExpr_atPos.canFind(p.end))
+                blockMemo_MulExpr_atPos ~= p.end;
             while (true)
             {
                 auto result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.option!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.wrapAround!(Spacing, MulExpr, Spacing), pegged.peg.wrapAround!(Spacing, MulOp, Spacing)), Spacing)), pegged.peg.wrapAround!(Spacing, UnaryExpr, Spacing)), "Zero.MulExpr"), "MulExpr")(p);
@@ -2070,8 +2074,10 @@ struct GenericZero(TParseTree)
                     return *m;
             auto current = fail(p);
             seed[p.end] = current;
-            blockMemo_ArrayIndex_atPos ~= p.end;
-            blockMemo_PostExpr_atPos ~= p.end;
+            if (!blockMemo_ArrayIndex_atPos.canFind(p.end))
+                blockMemo_ArrayIndex_atPos ~= p.end;
+            if (!blockMemo_PostExpr_atPos.canFind(p.end))
+                blockMemo_PostExpr_atPos ~= p.end;
             while (true)
             {
                 auto result = hooked!(pegged.peg.defined!(pegged.peg.or!(pegged.peg.wrapAround!(Spacing, TableIndex, Spacing), pegged.peg.wrapAround!(Spacing, ArrayIndex, Spacing), pegged.peg.wrapAround!(Spacing, CallExpr, Spacing), pegged.peg.wrapAround!(Spacing, MemberCall, Spacing), pegged.peg.wrapAround!(Spacing, PrimaryExpr, Spacing)), "Zero.PostExpr"), "PostExpr")(p);
@@ -2126,8 +2132,10 @@ struct GenericZero(TParseTree)
                     return *m;
             auto current = fail(p);
             seed[p.end] = current;
-            blockMemo_PostExpr_atPos ~= p.end;
-            blockMemo_MemberCall_atPos ~= p.end;
+            if (!blockMemo_PostExpr_atPos.canFind(p.end))
+                blockMemo_PostExpr_atPos ~= p.end;
+            if (!blockMemo_MemberCall_atPos.canFind(p.end))
+                blockMemo_MemberCall_atPos ~= p.end;
             while (true)
             {
                 auto result = hooked!(pegged.peg.defined!(pegged.peg.and!(PostExpr, pegged.peg.discard!(pegged.peg.literal!(".")), identifier), "Zero.MemberCall"), "MemberCall")(p);
@@ -2181,8 +2189,10 @@ struct GenericZero(TParseTree)
                     return *m;
             auto current = fail(p);
             seed[p.end] = current;
-            blockMemo_PostExpr_atPos ~= p.end;
-            blockMemo_TableIndex_atPos ~= p.end;
+            if (!blockMemo_PostExpr_atPos.canFind(p.end))
+                blockMemo_PostExpr_atPos ~= p.end;
+            if (!blockMemo_TableIndex_atPos.canFind(p.end))
+                blockMemo_TableIndex_atPos ~= p.end;
             while (true)
             {
                 auto result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, PostExpr, Spacing), pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("{"), Spacing)), pegged.peg.wrapAround!(Spacing, Expression, Spacing), pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("}"), Spacing))), "Zero.TableIndex"), "TableIndex")(p);
@@ -2274,8 +2284,10 @@ struct GenericZero(TParseTree)
                     return *m;
             auto current = fail(p);
             seed[p.end] = current;
-            blockMemo_PostExpr_atPos ~= p.end;
-            blockMemo_CallExpr_atPos ~= p.end;
+            if (!blockMemo_PostExpr_atPos.canFind(p.end))
+                blockMemo_PostExpr_atPos ~= p.end;
+            if (!blockMemo_CallExpr_atPos.canFind(p.end))
+                blockMemo_CallExpr_atPos ~= p.end;
             while (true)
             {
                 auto result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, PostExpr, Spacing), pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("("), Spacing)), pegged.peg.option!(pegged.peg.wrapAround!(Spacing, Argument, Spacing)), pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(")"), Spacing))), "Zero.CallExpr"), "CallExpr")(p);
@@ -3638,6 +3650,15 @@ struct GenericZero(TParseTree)
     static void forgetMemo()
     {
         memo = null;
+						blockMemo_TableIndex_atPos.length = 0;
+						blockMemo_PostExpr_atPos.length = 0;
+						blockMemo_ArrayIndex_atPos.length = 0;
+						blockMemo_CallExpr_atPos.length = 0;
+						blockMemo_MemberCall_atPos.length = 0;
+						blockMemo_OrExpr_atPos.length = 0;
+						blockMemo_AndExpr_atPos.length = 0;
+						blockMemo_AddExpr_atPos.length = 0;
+						blockMemo_MulExpr_atPos.length = 0;
     }
     }
 }

@@ -7,12 +7,14 @@ import std.stdio : writeln;
 import std.conv;
 import std.traits : isSomeString;
 import std.container.slist;
+import zero.allocator;
 
 struct Generator
 {
 public:
     this(ParseTree root)
 	{
+        allocator = Allocator();
 		generate(root);
 		emitCode("%5s", "HALT");
 	}
@@ -44,6 +46,8 @@ private:
 	int tmpOffset = 0;
 
     string[] buffers;
+
+    Allocator allocator;
 
     void formatCode(Char, A...)(in Char[] fmt, A args)
     {
@@ -137,7 +141,9 @@ private:
                 break;
 
 			case "Zero.VarIdentifier":
-				emitRM("LD", ac, node.matches[0], 0, "load var %s", node.matches[0]);
+                auto var = allocator.FindVariable(node.matches[0]);
+                if (var !is null)
+				    emitRM("LD", ac, var.offset, mp, "load var %s", node.matches[0]);
 				break;
 
 			case "Zero.Decimal":
@@ -193,16 +199,20 @@ private:
 
     void generateVar(ParseTree node)
     {
+        EVarScope varScope = EVarScope.Local;
+
         if (node.matches[0] == "global")
         {
+            varScope = EVarScope.Global;
         }
 
         foreach (decl; node.children[0].children)
         {
+            auto var = allocator.AllocateVariable(decl.children[0].matches[0], varScope);
             if (decl.children.length > 1)
             {
                 generate(decl.children[1]);
-                emitRM("ST", ac, node.matches[0], gp, "assign %s", node.matches[0]);
+                emitRM("ST", ac, var.offset, mp, "assign %s", var.name);
             }
         }
     }
@@ -367,7 +377,7 @@ private:
         BackPatchHelper helper = BackPatchHelper("return", &this);
 
         emitComment("----> function");
-        emitCode("%5s %s", "FUN", node.matches[0]);
+        emitCode("%5s %s", "PROC", node.matches[0]);
         appendComment("function %s", node.matches[0]);
         endLoc = emitSkip(0);
         emitCode("%5s", "RET");
@@ -376,17 +386,19 @@ private:
 
     void generateCall(ParseTree node)
     {
-        generate(node.children[0]);
-        if (node.children.length > 1)
-        {
-            emitRM("ST", ac, tmpOffset--, mp, "op: push left");
-            foreach (child; node.children[1].children)
-            {
-                generate(child);
-            }
-            emitRM("LD", ac1, ++tmpOffset, mp, "op: load left");
-        }
-        emitRO("CALL", ac, ac1, ac, "call");
+        //generate(node.children[0]);
+        //if (node.children.length > 1)
+        //{
+        //    emitRM("ST", ac, tmpOffset--, mp, "op: push left");
+        //    foreach (child; node.children[1].children)
+        //    {
+        //        generate(child);
+        //    }
+        //    emitRM("LD", ac1, ++tmpOffset, mp, "op: load left");
+        //}
+        //emitRM("ST", fp, tmpOffset--, mp, "save fp");
+        //emitRO("LDI", fp, sp, 0);
+        //emitRO("CALL", ac, ac1, ac, "call");
     }
 
     void generateTernary(ParseTree node)

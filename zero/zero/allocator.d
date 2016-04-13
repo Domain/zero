@@ -1,6 +1,9 @@
 module zero.allocator;
 
 import std.container.slist;
+import std.array;
+import std.format;
+import msgpack;
 
 enum EVarScope
 {
@@ -21,6 +24,17 @@ class Variable
         this.offset = offset;
         this.depth = depth;
     }
+}
+
+enum RegisterType
+{
+    Local = 0, Global, Const, Literal
+}
+
+struct Register
+{
+    int offset;
+    RegisterType type;
 }
 
 struct Allocator
@@ -106,11 +120,94 @@ public:
         return null;
     }
 
+    string AllocateConst(T)(T value)
+    {
+        auto map = FindConst(value);
+        if (map >= 0)
+        {
+            return format("%d(%d)", map, RegisterType.Const);
+        }
+        auto offset = constStack.data.length;
+        constStack.put(pack(value));
+        constCount++;
+        AddConst(value, offset);
+        return format("%d(%d)", offset, RegisterType.Const);
+    }
+
+    int FindConst(long value)
+    {
+        auto map = value in longMap;
+        if (map !is null)
+        {
+            return *map;
+        }
+        return -1;
+    }
+
+    int FindConst(double value)
+    {
+        auto map = value in doubleMap;
+        if (map !is null)
+        {
+            return *map;
+        }
+        return -1;
+    }
+
+    int FindConst(string value)
+    {
+        auto map = value in stringMap;
+        if (map !is null)
+        {
+            return *map;
+        }
+        return -1;
+    }
+
+    void AddConst(long value, int offset)
+    {
+        longMap[value] = offset;
+    }
+
+    void AddConst(double value, int offset)
+    {
+        doubleMap[value] = offset;
+    }
+
+    void AddConst(string value, int offset)
+    {
+        stringMap[value] = offset;
+    }
+
+    string AllocateRegister()
+    {
+        return format("%d(%d)", freeReg++, RegisterType.Local);
+    }
+
+    string LastRegister()
+    {
+        return format("%d(%d)", freeReg, RegisterType.Local);
+    }
+
+    const(ubyte[]) ConstData() @property
+    {
+        return constStack.data;
+    }
+
+    int ConstCount() @property
+    {
+        return constCount;
+    }
+
 private:
     static immutable StackSize = 128;
 
     Variable[StackSize] localStack;
     Variable[StackSize] globalStack;
+    Appender!(ubyte[]) constStack;
+    int[long] longMap;
+    int[double] doubleMap;
+    int[string] stringMap;
 
     int[] bp;
     SList!int fp;
@@ -118,4 +215,6 @@ private:
     int sp = 0;
     int globalSP = 0;
     int depth = 0;
+    int constCount = 0;
+    int freeReg = 0;
 }

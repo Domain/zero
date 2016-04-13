@@ -44,15 +44,15 @@ This module was automatically generated from the following grammar:
 		ConstDeclarationList < ConstDeclaration (:',' ConstDeclaration)*
 		ConstDeclaration < Identifier :':=' Expression
 		FunctionStatement < :'function' identifier Parameters FunctionAttributes Statement
-		Parameters < :'(' ParameterList? :')'
-		ParameterList < '…' / Parameter (:',' Parameter)*
-		Parameter < :'var' VarExpression
+		Parameters < '(' ParameterList? ')'
+		ParameterList < Parameter (:',' Parameter)*
+		Parameter < 'var' VarExpression
 		FunctionAttributes < FunctionAttribute*
         FunctionAttribute <- 'override'
 
 		### Expression ###
 
-		Expression < AssignExpr {simplify}
+		Expression < AssignExpr 
 		AssignExpr <{simplify} TernaryExpr ( :':=' TernaryExpr )? 
 		TernaryExpr < OrExpr ( :'?' TernaryExpr :':' TernaryExpr )?
 		OrExpr < (OrExpr 'or')? AndExpr
@@ -68,11 +68,12 @@ This module was automatically generated from the following grammar:
 		SignExpr < Sign UnaryExpr
 		PowExpr < PostExpr ('^' UnaryExpr)?
 		PostExpr < TableIndex / ArrayIndex / CallExpr / MemberCall / PrimaryExpr
-		MemberCall <- PostExpr :'.' identifier
+		MemberCall <- PostExpr :'.' Identifier
 		TableIndex < PostExpr :'{' Expression :'}'
 		ArrayIndex < PostExpr :'[' Expression :']'
-		CallExpr < PostExpr :'(' Argument? :')'
-		Argument < Expression (:',' Expression)*
+		CallExpr < PostExpr Argument
+        Argument < '(' ArgumentList? ')'
+		ArgumentList < Expression (:',' Expression)*
 		PrimaryExpr < :'(' Expression :')' / 
 			ArrayExpr / 
 			TableExpr / 
@@ -94,17 +95,19 @@ This module was automatically generated from the following grammar:
 		ConstExpr < Identifier
 		VarIdentifier <- :'$' identifier
 		
-		IntegerLiteral <- Binary / Hexadecimal / Decimal
+		IntegerLiteral <- Binary / Hexadecimal / Octal / Decimal
 		Decimal <~ :('0'[dD])? Integer / Sign? Integer
 		Binary <~ :('0'[bB]) [01]([01] / :'\'')*
 		Hexadecimal <~ :('0'[xX]) HexDigit (HexDigit / '\'')*
 		HexDigit < [0-9a-fA-F]
+		Octal <~ :('0'[cC]) OctalDigit (OctalDigit / '\'')*
+		OctalDigit < [0-7]
 		Sign <- '+' / '-'
 		Integer <~ digit (digit / :'\'')*
 		RealLiteral <~ Sign? Integer '.' Integer ([eE] Sign? Integer)? / Sign? Integer [eE] Sign? Integer
 		String < RawString / QuotedString
-		RawString <~ :backquote (!backquote .)* :backquote
-		QuotedString <~ :doublequote (DQChar)* :doublequote
+		RawString <~ backquote (!backquote .)* backquote
+		QuotedString <~ doublequote (DQChar)* doublequote
 		DQChar <- EscapeSequence / !doublequote .
 		EscapeSequence <- backslash (doublequote / backslash / [nrt])
 		This < '$'
@@ -132,10 +135,10 @@ module zero.parser;
 
 T simplify(T)(T node)
 {
-    if (node.children.length == 1)
+    /*if (node.children.length == 1)
     {
         return node.children[0];
-    }
+    }*/
     return node;
 }
 
@@ -241,6 +244,7 @@ struct GenericZero(TParseTree)
         rules["ArrayIndex"] = toDelegate(&ArrayIndex);
         rules["CallExpr"] = toDelegate(&CallExpr);
         rules["Argument"] = toDelegate(&Argument);
+        rules["ArgumentList"] = toDelegate(&ArgumentList);
         rules["PrimaryExpr"] = toDelegate(&PrimaryExpr);
         rules["ArrayExpr"] = toDelegate(&ArrayExpr);
         rules["ArrayElement"] = toDelegate(&ArrayElement);
@@ -254,6 +258,8 @@ struct GenericZero(TParseTree)
         rules["Binary"] = toDelegate(&Binary);
         rules["Hexadecimal"] = toDelegate(&Hexadecimal);
         rules["HexDigit"] = toDelegate(&HexDigit);
+        rules["Octal"] = toDelegate(&Octal);
+        rules["OctalDigit"] = toDelegate(&OctalDigit);
         rules["Sign"] = toDelegate(&Sign);
         rules["Integer"] = toDelegate(&Integer);
         rules["RealLiteral"] = toDelegate(&RealLiteral);
@@ -1270,7 +1276,7 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("("), Spacing)), pegged.peg.option!(pegged.peg.wrapAround!(Spacing, ParameterList, Spacing)), pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(")"), Spacing))), "Zero.Parameters")(p);
+            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("("), Spacing), pegged.peg.option!(pegged.peg.wrapAround!(Spacing, ParameterList, Spacing)), pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(")"), Spacing)), "Zero.Parameters")(p);
         }
         else
         {
@@ -1278,7 +1284,7 @@ struct GenericZero(TParseTree)
                 return *m;
             else
             {
-                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("("), Spacing)), pegged.peg.option!(pegged.peg.wrapAround!(Spacing, ParameterList, Spacing)), pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(")"), Spacing))), "Zero.Parameters"), "Parameters")(p);
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("("), Spacing), pegged.peg.option!(pegged.peg.wrapAround!(Spacing, ParameterList, Spacing)), pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(")"), Spacing)), "Zero.Parameters"), "Parameters")(p);
                 memo[tuple(`Parameters`, p.end)] = result;
                 return result;
             }
@@ -1289,12 +1295,12 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("("), Spacing)), pegged.peg.option!(pegged.peg.wrapAround!(Spacing, ParameterList, Spacing)), pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(")"), Spacing))), "Zero.Parameters")(TParseTree("", false,[], s));
+            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("("), Spacing), pegged.peg.option!(pegged.peg.wrapAround!(Spacing, ParameterList, Spacing)), pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(")"), Spacing)), "Zero.Parameters")(TParseTree("", false,[], s));
         }
         else
         {
             forgetMemo();
-            return hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("("), Spacing)), pegged.peg.option!(pegged.peg.wrapAround!(Spacing, ParameterList, Spacing)), pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(")"), Spacing))), "Zero.Parameters"), "Parameters")(TParseTree("", false,[], s));
+            return hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("("), Spacing), pegged.peg.option!(pegged.peg.wrapAround!(Spacing, ParameterList, Spacing)), pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(")"), Spacing)), "Zero.Parameters"), "Parameters")(TParseTree("", false,[], s));
         }
     }
     static string Parameters(GetName g)
@@ -1306,7 +1312,7 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.or!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("…"), Spacing), pegged.peg.and!(pegged.peg.wrapAround!(Spacing, Parameter, Spacing), pegged.peg.zeroOrMore!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(","), Spacing)), pegged.peg.wrapAround!(Spacing, Parameter, Spacing)), Spacing)))), "Zero.ParameterList")(p);
+            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, Parameter, Spacing), pegged.peg.zeroOrMore!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(","), Spacing)), pegged.peg.wrapAround!(Spacing, Parameter, Spacing)), Spacing))), "Zero.ParameterList")(p);
         }
         else
         {
@@ -1314,7 +1320,7 @@ struct GenericZero(TParseTree)
                 return *m;
             else
             {
-                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.or!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("…"), Spacing), pegged.peg.and!(pegged.peg.wrapAround!(Spacing, Parameter, Spacing), pegged.peg.zeroOrMore!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(","), Spacing)), pegged.peg.wrapAround!(Spacing, Parameter, Spacing)), Spacing)))), "Zero.ParameterList"), "ParameterList")(p);
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, Parameter, Spacing), pegged.peg.zeroOrMore!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(","), Spacing)), pegged.peg.wrapAround!(Spacing, Parameter, Spacing)), Spacing))), "Zero.ParameterList"), "ParameterList")(p);
                 memo[tuple(`ParameterList`, p.end)] = result;
                 return result;
             }
@@ -1325,12 +1331,12 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.or!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("…"), Spacing), pegged.peg.and!(pegged.peg.wrapAround!(Spacing, Parameter, Spacing), pegged.peg.zeroOrMore!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(","), Spacing)), pegged.peg.wrapAround!(Spacing, Parameter, Spacing)), Spacing)))), "Zero.ParameterList")(TParseTree("", false,[], s));
+            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, Parameter, Spacing), pegged.peg.zeroOrMore!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(","), Spacing)), pegged.peg.wrapAround!(Spacing, Parameter, Spacing)), Spacing))), "Zero.ParameterList")(TParseTree("", false,[], s));
         }
         else
         {
             forgetMemo();
-            return hooked!(pegged.peg.defined!(pegged.peg.or!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("…"), Spacing), pegged.peg.and!(pegged.peg.wrapAround!(Spacing, Parameter, Spacing), pegged.peg.zeroOrMore!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(","), Spacing)), pegged.peg.wrapAround!(Spacing, Parameter, Spacing)), Spacing)))), "Zero.ParameterList"), "ParameterList")(TParseTree("", false,[], s));
+            return hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, Parameter, Spacing), pegged.peg.zeroOrMore!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(","), Spacing)), pegged.peg.wrapAround!(Spacing, Parameter, Spacing)), Spacing))), "Zero.ParameterList"), "ParameterList")(TParseTree("", false,[], s));
         }
     }
     static string ParameterList(GetName g)
@@ -1342,7 +1348,7 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("var"), Spacing)), pegged.peg.wrapAround!(Spacing, VarExpression, Spacing)), "Zero.Parameter")(p);
+            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("var"), Spacing), pegged.peg.wrapAround!(Spacing, VarExpression, Spacing)), "Zero.Parameter")(p);
         }
         else
         {
@@ -1350,7 +1356,7 @@ struct GenericZero(TParseTree)
                 return *m;
             else
             {
-                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("var"), Spacing)), pegged.peg.wrapAround!(Spacing, VarExpression, Spacing)), "Zero.Parameter"), "Parameter")(p);
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("var"), Spacing), pegged.peg.wrapAround!(Spacing, VarExpression, Spacing)), "Zero.Parameter"), "Parameter")(p);
                 memo[tuple(`Parameter`, p.end)] = result;
                 return result;
             }
@@ -1361,12 +1367,12 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("var"), Spacing)), pegged.peg.wrapAround!(Spacing, VarExpression, Spacing)), "Zero.Parameter")(TParseTree("", false,[], s));
+            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("var"), Spacing), pegged.peg.wrapAround!(Spacing, VarExpression, Spacing)), "Zero.Parameter")(TParseTree("", false,[], s));
         }
         else
         {
             forgetMemo();
-            return hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("var"), Spacing)), pegged.peg.wrapAround!(Spacing, VarExpression, Spacing)), "Zero.Parameter"), "Parameter")(TParseTree("", false,[], s));
+            return hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("var"), Spacing), pegged.peg.wrapAround!(Spacing, VarExpression, Spacing)), "Zero.Parameter"), "Parameter")(TParseTree("", false,[], s));
         }
     }
     static string Parameter(GetName g)
@@ -1450,7 +1456,7 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.action!(pegged.peg.wrapAround!(Spacing, AssignExpr, Spacing), simplify), "Zero.Expression")(p);
+            return         pegged.peg.defined!(pegged.peg.wrapAround!(Spacing, AssignExpr, Spacing), "Zero.Expression")(p);
         }
         else
         {
@@ -1458,7 +1464,7 @@ struct GenericZero(TParseTree)
                 return *m;
             else
             {
-                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.action!(pegged.peg.wrapAround!(Spacing, AssignExpr, Spacing), simplify), "Zero.Expression"), "Expression")(p);
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.wrapAround!(Spacing, AssignExpr, Spacing), "Zero.Expression"), "Expression")(p);
                 memo[tuple(`Expression`, p.end)] = result;
                 return result;
             }
@@ -1469,12 +1475,12 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.action!(pegged.peg.wrapAround!(Spacing, AssignExpr, Spacing), simplify), "Zero.Expression")(TParseTree("", false,[], s));
+            return         pegged.peg.defined!(pegged.peg.wrapAround!(Spacing, AssignExpr, Spacing), "Zero.Expression")(TParseTree("", false,[], s));
         }
         else
         {
             forgetMemo();
-            return hooked!(pegged.peg.defined!(pegged.peg.action!(pegged.peg.wrapAround!(Spacing, AssignExpr, Spacing), simplify), "Zero.Expression"), "Expression")(TParseTree("", false,[], s));
+            return hooked!(pegged.peg.defined!(pegged.peg.wrapAround!(Spacing, AssignExpr, Spacing), "Zero.Expression"), "Expression")(TParseTree("", false,[], s));
         }
     }
     static string Expression(GetName g)
@@ -1486,7 +1492,7 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.action!(pegged.peg.and!(TernaryExpr, pegged.peg.option!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.literal!(":=")), TernaryExpr))), simplify), "Zero.AssignExpr")(p);
+            return pegged.peg.action!(        pegged.peg.defined!(pegged.peg.and!(TernaryExpr, pegged.peg.option!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.literal!(":=")), TernaryExpr))), "Zero.AssignExpr"), simplify)(p);
         }
         else
         {
@@ -1494,7 +1500,7 @@ struct GenericZero(TParseTree)
                 return *m;
             else
             {
-                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.action!(pegged.peg.and!(TernaryExpr, pegged.peg.option!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.literal!(":=")), TernaryExpr))), simplify), "Zero.AssignExpr"), "AssignExpr")(p);
+                TParseTree result = pegged.peg.action!(hooked!(pegged.peg.defined!(pegged.peg.and!(TernaryExpr, pegged.peg.option!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.literal!(":=")), TernaryExpr))), "Zero.AssignExpr"), "AssignExpr"), simplify)(p);
                 memo[tuple(`AssignExpr`, p.end)] = result;
                 return result;
             }
@@ -1505,12 +1511,12 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.action!(pegged.peg.and!(TernaryExpr, pegged.peg.option!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.literal!(":=")), TernaryExpr))), simplify), "Zero.AssignExpr")(TParseTree("", false,[], s));
+            return pegged.peg.action!(        pegged.peg.defined!(pegged.peg.and!(TernaryExpr, pegged.peg.option!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.literal!(":=")), TernaryExpr))), "Zero.AssignExpr"), simplify)(TParseTree("", false,[], s));
         }
         else
         {
             forgetMemo();
-            return hooked!(pegged.peg.defined!(pegged.peg.action!(pegged.peg.and!(TernaryExpr, pegged.peg.option!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.literal!(":=")), TernaryExpr))), simplify), "Zero.AssignExpr"), "AssignExpr")(TParseTree("", false,[], s));
+            return pegged.peg.action!(hooked!(pegged.peg.defined!(pegged.peg.and!(TernaryExpr, pegged.peg.option!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.literal!(":=")), TernaryExpr))), "Zero.AssignExpr"), "AssignExpr"), simplify)(TParseTree("", false,[], s));
         }
     }
     static string AssignExpr(GetName g)
@@ -2138,7 +2144,7 @@ struct GenericZero(TParseTree)
                 blockMemo_MemberCall_atPos ~= p.end;
             while (true)
             {
-                auto result = hooked!(pegged.peg.defined!(pegged.peg.and!(PostExpr, pegged.peg.discard!(pegged.peg.literal!(".")), identifier), "Zero.MemberCall"), "MemberCall")(p);
+                auto result = hooked!(pegged.peg.defined!(pegged.peg.and!(PostExpr, pegged.peg.discard!(pegged.peg.literal!(".")), Identifier), "Zero.MemberCall"), "MemberCall")(p);
                 if (result.end > current.end)
                 {
                     current = result;
@@ -2160,12 +2166,12 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.and!(PostExpr, pegged.peg.discard!(pegged.peg.literal!(".")), identifier), "Zero.MemberCall")(TParseTree("", false,[], s));
+            return         pegged.peg.defined!(pegged.peg.and!(PostExpr, pegged.peg.discard!(pegged.peg.literal!(".")), Identifier), "Zero.MemberCall")(TParseTree("", false,[], s));
         }
         else
         {
             forgetMemo();
-            return hooked!(pegged.peg.defined!(pegged.peg.and!(PostExpr, pegged.peg.discard!(pegged.peg.literal!(".")), identifier), "Zero.MemberCall"), "MemberCall")(TParseTree("", false,[], s));
+            return hooked!(pegged.peg.defined!(pegged.peg.and!(PostExpr, pegged.peg.discard!(pegged.peg.literal!(".")), Identifier), "Zero.MemberCall"), "MemberCall")(TParseTree("", false,[], s));
         }
     }
     static string MemberCall(GetName g)
@@ -2290,7 +2296,7 @@ struct GenericZero(TParseTree)
                 blockMemo_CallExpr_atPos ~= p.end;
             while (true)
             {
-                auto result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, PostExpr, Spacing), pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("("), Spacing)), pegged.peg.option!(pegged.peg.wrapAround!(Spacing, Argument, Spacing)), pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(")"), Spacing))), "Zero.CallExpr"), "CallExpr")(p);
+                auto result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, PostExpr, Spacing), pegged.peg.wrapAround!(Spacing, Argument, Spacing)), "Zero.CallExpr"), "CallExpr")(p);
                 if (result.end > current.end)
                 {
                     current = result;
@@ -2312,12 +2318,12 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, PostExpr, Spacing), pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("("), Spacing)), pegged.peg.option!(pegged.peg.wrapAround!(Spacing, Argument, Spacing)), pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(")"), Spacing))), "Zero.CallExpr")(TParseTree("", false,[], s));
+            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, PostExpr, Spacing), pegged.peg.wrapAround!(Spacing, Argument, Spacing)), "Zero.CallExpr")(TParseTree("", false,[], s));
         }
         else
         {
             forgetMemo();
-            return hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, PostExpr, Spacing), pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("("), Spacing)), pegged.peg.option!(pegged.peg.wrapAround!(Spacing, Argument, Spacing)), pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(")"), Spacing))), "Zero.CallExpr"), "CallExpr")(TParseTree("", false,[], s));
+            return hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, PostExpr, Spacing), pegged.peg.wrapAround!(Spacing, Argument, Spacing)), "Zero.CallExpr"), "CallExpr")(TParseTree("", false,[], s));
         }
     }
     static string CallExpr(GetName g)
@@ -2329,7 +2335,7 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, Expression, Spacing), pegged.peg.zeroOrMore!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(","), Spacing)), pegged.peg.wrapAround!(Spacing, Expression, Spacing)), Spacing))), "Zero.Argument")(p);
+            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("("), Spacing), pegged.peg.option!(pegged.peg.wrapAround!(Spacing, ArgumentList, Spacing)), pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(")"), Spacing)), "Zero.Argument")(p);
         }
         else
         {
@@ -2337,7 +2343,7 @@ struct GenericZero(TParseTree)
                 return *m;
             else
             {
-                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, Expression, Spacing), pegged.peg.zeroOrMore!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(","), Spacing)), pegged.peg.wrapAround!(Spacing, Expression, Spacing)), Spacing))), "Zero.Argument"), "Argument")(p);
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("("), Spacing), pegged.peg.option!(pegged.peg.wrapAround!(Spacing, ArgumentList, Spacing)), pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(")"), Spacing)), "Zero.Argument"), "Argument")(p);
                 memo[tuple(`Argument`, p.end)] = result;
                 return result;
             }
@@ -2348,17 +2354,53 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, Expression, Spacing), pegged.peg.zeroOrMore!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(","), Spacing)), pegged.peg.wrapAround!(Spacing, Expression, Spacing)), Spacing))), "Zero.Argument")(TParseTree("", false,[], s));
+            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("("), Spacing), pegged.peg.option!(pegged.peg.wrapAround!(Spacing, ArgumentList, Spacing)), pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(")"), Spacing)), "Zero.Argument")(TParseTree("", false,[], s));
         }
         else
         {
             forgetMemo();
-            return hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, Expression, Spacing), pegged.peg.zeroOrMore!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(","), Spacing)), pegged.peg.wrapAround!(Spacing, Expression, Spacing)), Spacing))), "Zero.Argument"), "Argument")(TParseTree("", false,[], s));
+            return hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!("("), Spacing), pegged.peg.option!(pegged.peg.wrapAround!(Spacing, ArgumentList, Spacing)), pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(")"), Spacing)), "Zero.Argument"), "Argument")(TParseTree("", false,[], s));
         }
     }
     static string Argument(GetName g)
     {
         return "Zero.Argument";
+    }
+
+    static TParseTree ArgumentList(TParseTree p)
+    {
+        if(__ctfe)
+        {
+            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, Expression, Spacing), pegged.peg.zeroOrMore!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(","), Spacing)), pegged.peg.wrapAround!(Spacing, Expression, Spacing)), Spacing))), "Zero.ArgumentList")(p);
+        }
+        else
+        {
+            if (auto m = tuple(`ArgumentList`, p.end) in memo)
+                return *m;
+            else
+            {
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, Expression, Spacing), pegged.peg.zeroOrMore!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(","), Spacing)), pegged.peg.wrapAround!(Spacing, Expression, Spacing)), Spacing))), "Zero.ArgumentList"), "ArgumentList")(p);
+                memo[tuple(`ArgumentList`, p.end)] = result;
+                return result;
+            }
+        }
+    }
+
+    static TParseTree ArgumentList(string s)
+    {
+        if(__ctfe)
+        {
+            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, Expression, Spacing), pegged.peg.zeroOrMore!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(","), Spacing)), pegged.peg.wrapAround!(Spacing, Expression, Spacing)), Spacing))), "Zero.ArgumentList")(TParseTree("", false,[], s));
+        }
+        else
+        {
+            forgetMemo();
+            return hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, Expression, Spacing), pegged.peg.zeroOrMore!(pegged.peg.wrapAround!(Spacing, pegged.peg.and!(pegged.peg.discard!(pegged.peg.wrapAround!(Spacing, pegged.peg.literal!(","), Spacing)), pegged.peg.wrapAround!(Spacing, Expression, Spacing)), Spacing))), "Zero.ArgumentList"), "ArgumentList")(TParseTree("", false,[], s));
+        }
+    }
+    static string ArgumentList(GetName g)
+    {
+        return "Zero.ArgumentList";
     }
 
     static TParseTree PrimaryExpr(TParseTree p)
@@ -2653,7 +2695,7 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.or!(Binary, Hexadecimal, Decimal), "Zero.IntegerLiteral")(p);
+            return         pegged.peg.defined!(pegged.peg.or!(Binary, Hexadecimal, Octal, Decimal), "Zero.IntegerLiteral")(p);
         }
         else
         {
@@ -2661,7 +2703,7 @@ struct GenericZero(TParseTree)
                 return *m;
             else
             {
-                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.or!(Binary, Hexadecimal, Decimal), "Zero.IntegerLiteral"), "IntegerLiteral")(p);
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.or!(Binary, Hexadecimal, Octal, Decimal), "Zero.IntegerLiteral"), "IntegerLiteral")(p);
                 memo[tuple(`IntegerLiteral`, p.end)] = result;
                 return result;
             }
@@ -2672,12 +2714,12 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.or!(Binary, Hexadecimal, Decimal), "Zero.IntegerLiteral")(TParseTree("", false,[], s));
+            return         pegged.peg.defined!(pegged.peg.or!(Binary, Hexadecimal, Octal, Decimal), "Zero.IntegerLiteral")(TParseTree("", false,[], s));
         }
         else
         {
             forgetMemo();
-            return hooked!(pegged.peg.defined!(pegged.peg.or!(Binary, Hexadecimal, Decimal), "Zero.IntegerLiteral"), "IntegerLiteral")(TParseTree("", false,[], s));
+            return hooked!(pegged.peg.defined!(pegged.peg.or!(Binary, Hexadecimal, Octal, Decimal), "Zero.IntegerLiteral"), "IntegerLiteral")(TParseTree("", false,[], s));
         }
     }
     static string IntegerLiteral(GetName g)
@@ -2829,6 +2871,78 @@ struct GenericZero(TParseTree)
         return "Zero.HexDigit";
     }
 
+    static TParseTree Octal(TParseTree p)
+    {
+        if(__ctfe)
+        {
+            return         pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.and!(pegged.peg.literal!("0"), pegged.peg.or!(pegged.peg.literal!("c"), pegged.peg.literal!("C")))), OctalDigit, pegged.peg.zeroOrMore!(pegged.peg.or!(OctalDigit, pegged.peg.literal!("\'"))))), "Zero.Octal")(p);
+        }
+        else
+        {
+            if (auto m = tuple(`Octal`, p.end) in memo)
+                return *m;
+            else
+            {
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.and!(pegged.peg.literal!("0"), pegged.peg.or!(pegged.peg.literal!("c"), pegged.peg.literal!("C")))), OctalDigit, pegged.peg.zeroOrMore!(pegged.peg.or!(OctalDigit, pegged.peg.literal!("\'"))))), "Zero.Octal"), "Octal")(p);
+                memo[tuple(`Octal`, p.end)] = result;
+                return result;
+            }
+        }
+    }
+
+    static TParseTree Octal(string s)
+    {
+        if(__ctfe)
+        {
+            return         pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.and!(pegged.peg.literal!("0"), pegged.peg.or!(pegged.peg.literal!("c"), pegged.peg.literal!("C")))), OctalDigit, pegged.peg.zeroOrMore!(pegged.peg.or!(OctalDigit, pegged.peg.literal!("\'"))))), "Zero.Octal")(TParseTree("", false,[], s));
+        }
+        else
+        {
+            forgetMemo();
+            return hooked!(pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(pegged.peg.discard!(pegged.peg.and!(pegged.peg.literal!("0"), pegged.peg.or!(pegged.peg.literal!("c"), pegged.peg.literal!("C")))), OctalDigit, pegged.peg.zeroOrMore!(pegged.peg.or!(OctalDigit, pegged.peg.literal!("\'"))))), "Zero.Octal"), "Octal")(TParseTree("", false,[], s));
+        }
+    }
+    static string Octal(GetName g)
+    {
+        return "Zero.Octal";
+    }
+
+    static TParseTree OctalDigit(TParseTree p)
+    {
+        if(__ctfe)
+        {
+            return         pegged.peg.defined!(pegged.peg.wrapAround!(Spacing, pegged.peg.charRange!('0', '7'), Spacing), "Zero.OctalDigit")(p);
+        }
+        else
+        {
+            if (auto m = tuple(`OctalDigit`, p.end) in memo)
+                return *m;
+            else
+            {
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.wrapAround!(Spacing, pegged.peg.charRange!('0', '7'), Spacing), "Zero.OctalDigit"), "OctalDigit")(p);
+                memo[tuple(`OctalDigit`, p.end)] = result;
+                return result;
+            }
+        }
+    }
+
+    static TParseTree OctalDigit(string s)
+    {
+        if(__ctfe)
+        {
+            return         pegged.peg.defined!(pegged.peg.wrapAround!(Spacing, pegged.peg.charRange!('0', '7'), Spacing), "Zero.OctalDigit")(TParseTree("", false,[], s));
+        }
+        else
+        {
+            forgetMemo();
+            return hooked!(pegged.peg.defined!(pegged.peg.wrapAround!(Spacing, pegged.peg.charRange!('0', '7'), Spacing), "Zero.OctalDigit"), "OctalDigit")(TParseTree("", false,[], s));
+        }
+    }
+    static string OctalDigit(GetName g)
+    {
+        return "Zero.OctalDigit";
+    }
+
     static TParseTree Sign(TParseTree p)
     {
         if(__ctfe)
@@ -2977,7 +3091,7 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(pegged.peg.discard!(backquote), pegged.peg.zeroOrMore!(pegged.peg.and!(pegged.peg.negLookahead!(backquote), pegged.peg.any)), pegged.peg.discard!(backquote))), "Zero.RawString")(p);
+            return         pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(backquote, pegged.peg.zeroOrMore!(pegged.peg.and!(pegged.peg.negLookahead!(backquote), pegged.peg.any)), backquote)), "Zero.RawString")(p);
         }
         else
         {
@@ -2985,7 +3099,7 @@ struct GenericZero(TParseTree)
                 return *m;
             else
             {
-                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(pegged.peg.discard!(backquote), pegged.peg.zeroOrMore!(pegged.peg.and!(pegged.peg.negLookahead!(backquote), pegged.peg.any)), pegged.peg.discard!(backquote))), "Zero.RawString"), "RawString")(p);
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(backquote, pegged.peg.zeroOrMore!(pegged.peg.and!(pegged.peg.negLookahead!(backquote), pegged.peg.any)), backquote)), "Zero.RawString"), "RawString")(p);
                 memo[tuple(`RawString`, p.end)] = result;
                 return result;
             }
@@ -2996,12 +3110,12 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(pegged.peg.discard!(backquote), pegged.peg.zeroOrMore!(pegged.peg.and!(pegged.peg.negLookahead!(backquote), pegged.peg.any)), pegged.peg.discard!(backquote))), "Zero.RawString")(TParseTree("", false,[], s));
+            return         pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(backquote, pegged.peg.zeroOrMore!(pegged.peg.and!(pegged.peg.negLookahead!(backquote), pegged.peg.any)), backquote)), "Zero.RawString")(TParseTree("", false,[], s));
         }
         else
         {
             forgetMemo();
-            return hooked!(pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(pegged.peg.discard!(backquote), pegged.peg.zeroOrMore!(pegged.peg.and!(pegged.peg.negLookahead!(backquote), pegged.peg.any)), pegged.peg.discard!(backquote))), "Zero.RawString"), "RawString")(TParseTree("", false,[], s));
+            return hooked!(pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(backquote, pegged.peg.zeroOrMore!(pegged.peg.and!(pegged.peg.negLookahead!(backquote), pegged.peg.any)), backquote)), "Zero.RawString"), "RawString")(TParseTree("", false,[], s));
         }
     }
     static string RawString(GetName g)
@@ -3013,7 +3127,7 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(pegged.peg.discard!(doublequote), pegged.peg.zeroOrMore!(DQChar), pegged.peg.discard!(doublequote))), "Zero.QuotedString")(p);
+            return         pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(doublequote, pegged.peg.zeroOrMore!(DQChar), doublequote)), "Zero.QuotedString")(p);
         }
         else
         {
@@ -3021,7 +3135,7 @@ struct GenericZero(TParseTree)
                 return *m;
             else
             {
-                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(pegged.peg.discard!(doublequote), pegged.peg.zeroOrMore!(DQChar), pegged.peg.discard!(doublequote))), "Zero.QuotedString"), "QuotedString")(p);
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(doublequote, pegged.peg.zeroOrMore!(DQChar), doublequote)), "Zero.QuotedString"), "QuotedString")(p);
                 memo[tuple(`QuotedString`, p.end)] = result;
                 return result;
             }
@@ -3032,12 +3146,12 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(pegged.peg.discard!(doublequote), pegged.peg.zeroOrMore!(DQChar), pegged.peg.discard!(doublequote))), "Zero.QuotedString")(TParseTree("", false,[], s));
+            return         pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(doublequote, pegged.peg.zeroOrMore!(DQChar), doublequote)), "Zero.QuotedString")(TParseTree("", false,[], s));
         }
         else
         {
             forgetMemo();
-            return hooked!(pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(pegged.peg.discard!(doublequote), pegged.peg.zeroOrMore!(DQChar), pegged.peg.discard!(doublequote))), "Zero.QuotedString"), "QuotedString")(TParseTree("", false,[], s));
+            return hooked!(pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(doublequote, pegged.peg.zeroOrMore!(DQChar), doublequote)), "Zero.QuotedString"), "QuotedString")(TParseTree("", false,[], s));
         }
     }
     static string QuotedString(GetName g)

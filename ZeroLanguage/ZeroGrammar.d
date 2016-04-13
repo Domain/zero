@@ -7,10 +7,10 @@ int main(string[] argv)
     enum semanticActions = 
 `T simplify(T)(T node)
 {
-    if (node.children.length == 1)
+    /*if (node.children.length == 1)
     {
         return node.children[0];
-    }
+    }*/
     return node;
 }`;
 
@@ -57,15 +57,15 @@ int main(string[] argv)
 		ConstDeclarationList < ConstDeclaration (:',' ConstDeclaration)*
 		ConstDeclaration < Identifier :':=' Expression
 		FunctionStatement < :'function' identifier Parameters FunctionAttributes Statement
-		Parameters < :'(' ParameterList? :')'
-		ParameterList < '…' / Parameter (:',' Parameter)*
-		Parameter < :'var' VarExpression
+		Parameters < '(' ParameterList? ')'
+		ParameterList < Parameter (:',' Parameter)*
+		Parameter < 'var' VarExpression
 		FunctionAttributes < FunctionAttribute*
         FunctionAttribute <- 'override'
 
 		### Expression ###
 
-		Expression < AssignExpr {simplify}
+		Expression < AssignExpr 
 		AssignExpr <{simplify} TernaryExpr ( :':=' TernaryExpr )? 
 		TernaryExpr < OrExpr ( :'?' TernaryExpr :':' TernaryExpr )?
 		OrExpr < (OrExpr 'or')? AndExpr
@@ -81,11 +81,12 @@ int main(string[] argv)
 		SignExpr < Sign UnaryExpr
 		PowExpr < PostExpr ('^' UnaryExpr)?
 		PostExpr < TableIndex / ArrayIndex / CallExpr / MemberCall / PrimaryExpr
-		MemberCall <- PostExpr :'.' identifier
+		MemberCall <- PostExpr :'.' Identifier
 		TableIndex < PostExpr :'{' Expression :'}'
 		ArrayIndex < PostExpr :'[' Expression :']'
-		CallExpr < PostExpr :'(' Argument? :')'
-		Argument < Expression (:',' Expression)*
+		CallExpr < PostExpr Argument
+        Argument < '(' ArgumentList? ')'
+		ArgumentList < Expression (:',' Expression)*
 		PrimaryExpr < :'(' Expression :')' / 
 			ArrayExpr / 
 			TableExpr / 
@@ -107,17 +108,19 @@ int main(string[] argv)
 		ConstExpr < Identifier
 		VarIdentifier <- :'$' identifier
 		
-		IntegerLiteral <- Binary / Hexadecimal / Decimal
+		IntegerLiteral <- Binary / Hexadecimal / Octal / Decimal
 		Decimal <~ :('0'[dD])? Integer / Sign? Integer
 		Binary <~ :('0'[bB]) [01]([01] / :'\'')*
 		Hexadecimal <~ :('0'[xX]) HexDigit (HexDigit / '\'')*
 		HexDigit < [0-9a-fA-F]
+		Octal <~ :('0'[cC]) OctalDigit (OctalDigit / '\'')*
+		OctalDigit < [0-7]
 		Sign <- '+' / '-'
 		Integer <~ digit (digit / :'\'')*
 		RealLiteral <~ Sign? Integer '.' Integer ([eE] Sign? Integer)? / Sign? Integer [eE] Sign? Integer
 		String < RawString / QuotedString
-		RawString <~ :backquote (!backquote .)* :backquote
-		QuotedString <~ :doublequote (DQChar)* :doublequote
+		RawString <~ backquote (!backquote .)* backquote
+		QuotedString <~ doublequote (DQChar)* doublequote
 		DQChar <- EscapeSequence / !doublequote .
 		EscapeSequence <- backslash (doublequote / backslash / [nrt])
 		This < '$'

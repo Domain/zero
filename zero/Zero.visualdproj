@@ -53,7 +53,7 @@
   <cccmd>$(CC) -c</cccmd>
   <ccTransOpt>1</ccTransOpt>
   <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
-  <imppath>..\pegged</imppath>
+  <imppath>..\pegged;..\msgpack-d\src</imppath>
   <fileImppath />
   <outdir>$(ConfigurationName)</outdir>
   <objdir>$(OutDir)</objdir>
@@ -155,7 +155,7 @@
   <cccmd>$(CC) -c</cccmd>
   <ccTransOpt>1</ccTransOpt>
   <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
-  <imppath />
+  <imppath>..\pegged;..\msgpack-d\src</imppath>
   <fileImppath />
   <outdir>$(ConfigurationName)</outdir>
   <objdir>$(OutDir)</objdir>

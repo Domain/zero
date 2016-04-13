@@ -1,3 +1,6 @@
 [submodule "pegged"]
 	path = pegged
 	url = https://github.com/Domain/Pegged.git
+[submodule "msgpack-d"]
+	path = msgpack-d
+	url = https://github.com/msgpack/msgpack-d.git

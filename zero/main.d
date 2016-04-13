@@ -3,6 +3,7 @@ import zero.parser;
 import std.file;
 import zero.generator;
 import std.conv;
+import zero.analyzer;
 
 struct AST
 {
@@ -84,14 +85,19 @@ int main(string[] argv)
 	while ((line = readln()) !is null)
 	{
 		auto parsedTree = Zero(line);
+        auto simplified = parsedTree.dup;
+        simplified = simplifyParseTree(simplified);
 		//writeln(parsedTree);
 		if (!parsedTree.successful)
 			writeln(parsedTree.failMsg);
 		else
 			writeln(parsedTree.matches);
 		//calc(parsedTree);
-		writeln(generate(parsedTree));
 		writeln(parsedTree);
+        writeln();
+		writeln(simplified);
+        writeln();
+		writeln(generate(simplified));
 	}
     return 0;
 }

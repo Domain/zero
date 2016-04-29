@@ -4,16 +4,6 @@ import pegged.grammar;
 
 int main(string[] argv)
 {
-    enum semanticActions = 
-`T simplify(T)(T node)
-{
-    /*if (node.children.length == 1)
-    {
-        return node.children[0];
-    }*/
-    return node;
-}`;
-
 	enum zeroGrammar = `
 	Zero:
 
@@ -66,7 +56,7 @@ int main(string[] argv)
 		### Expression ###
 
 		Expression < AssignExpr 
-		AssignExpr <{simplify} TernaryExpr ( :':=' TernaryExpr )? 
+		AssignExpr < TernaryExpr ( :':=' TernaryExpr )? 
 		TernaryExpr < OrExpr ( :'?' TernaryExpr :':' TernaryExpr )?
 		OrExpr < (OrExpr 'or')? AndExpr
 		AndExpr < (AndExpr 'and')? CompareExpr
@@ -103,8 +93,8 @@ int main(string[] argv)
 		ArrayExpr < '[' ArrayElement? :','? ']'
 		ArrayElement < Expression (:',' Expression)*
 		TableExpr < '{' TableElementList? :','? '}'
-		TableElementList < TableElement (:',' TableElementList)?
-		TableElement < TernaryExpr (:':=' Expression)? (:',' TableElement)?
+		TableElementList < TableElement (:',' TableElement)*
+		TableElement < TernaryExpr (:':=' Expression)?
 		ConstExpr < Identifier
 		VarIdentifier <- :'$' identifier
 		
@@ -143,7 +133,7 @@ int main(string[] argv)
 		LineComment <~ :'//' (!endOfLine .)* :endOfLine
 		`;
 
-	asModule!()("zero.parser", "zero/parser", zeroGrammar, semanticActions);
+	asModule!()("zero.parser", "zero/parser", zeroGrammar);
 
     return 0;
 }

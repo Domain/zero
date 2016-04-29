@@ -38,12 +38,13 @@ private:
 
     enum InstructionSet
     {
-        HALT = 0, ADD, SUB, MUL, DIV, 
-        MOD, POW, NEG, CAT, IN,
-        AND, OR, NOT, MOV, CALL, 
-        RET, JMP, JEQ, JNE, LT, 
-        LE, EQ, NE, GT, GE,
-        LOAD, DATA
+        /*  5 */    HALT = 0, ADD, SUB, MUL, DIV, 
+        /* 10 */    MOD, POW, NEG, CAT, IN,
+        /* 15 */    AND, OR, NOT, MOV, CALL, 
+        /* 20 */    PROC, RET, JMP, JEQ, JNE, 
+        /* 25 */    LT, LE, EQ, NE, GT, 
+        /* 30 */    GE, DATA, GET, TAB, ARRY,
+        /* 35 */    
     }
 
     struct R0
@@ -77,15 +78,34 @@ private:
     union Instruction
     {
         uint instruction;
-        mixin(bitfields!(
-                         InstructionSet, "opCode", 6,
-                         uint, "", 26));
         R0 r0;
         R1 r1;
         R3 r3;
     }
 
+    enum LiteralType
+    {
+        Integer, Other
+    }
 
+    union Literal
+    {
+        byte number;
+        mixin(bitfields!(
+                         byte, "value", 6,
+                         LiteralType, "type", 1,
+                         byte, "", 1
+                         ));
+    }
+
+    immutable byte maxLiteral = cast(byte)0b0001_1111;
+    immutable byte minLiteral = cast(byte)0b1001_1111;
+    immutable Literal nullLiteral  = { 0b0100_0000 };
+    immutable Literal trueLiteral  = { 0b0100_0001 };
+    immutable Literal falseLiteral = { 0b0100_0010 };
+    immutable Literal real1Literal = { 0b0100_0011 };
+    immutable Literal thisLiteral  = { 0b0100_0100 };
+    immutable Literal emptyLiteral = { 0b0100_0101 };
     
 	int emitLoc = 0;
 	int highEmitLoc = 0;
@@ -120,7 +140,11 @@ private:
                     break;
 
                 case Value.Type.raw:
-                    emit("", value.as!string);
+                    emit("", "\"" ~ value.as!string ~ "\"");
+                    break;
+
+                case Value.Type.floating:
+                    emit("", value.as!double);
                     break;
 
                 default:
@@ -177,85 +201,9 @@ private:
                 generateFunction(node);
                 break;
 
-            case "Zero.AssignExpr":
-                if (node.children.length > 1)
-                {
-                    generate(node.children[1]);
-                    auto var = allocator.FindVariable(node.matches[0]);
-                    if (var !is null)
-                        emitRM("ST", ac, var.offset, mp, "assign %s", node.matches[0]);
-                }
-                else
-                {
-                    generate(node.children[0]);
-                }
-                break;
-
-            case "Zero.TernaryExpr":
-                generateTernary(node);
-                break;
-
-			case "Zero.AddExpr":
-			case "Zero.MulExpr":
-			case "Zero.CompareExpr":
-			case "Zero.OrExpr":
-			case "Zero.AndExpr":
-            case "Zero.PowExpr":
-				generateBinary(node);
-				break;
-
-			case "Zero.NotExpr":
-				generate(node.children[0]);
-				emitRO("NOT", ac, ac, 0, "op not");
-				break;
-
-            case "Zero.SignExpr":
-				generate(node.children[0]);
-                if (node.matches[0] == "-")
-				    emitRO("NEG", ac, ac, 0, "op -");
-                break;
-
-			case "Zero.VarIdentifier":
-                auto var = allocator.FindVariable(node.matches[0]);
-                if (var !is null)
-				    emitRM("LDV", ac, var.offset, mp, "load var %s", node.matches[0]);
-				break;
-
-			case "Zero.Decimal":
-				auto result = to!long(node.matches[0]);
-                emitRM("LDI", ac, result, 0, "load decimal %s", node.matches[0]);
-                //emitCode("%5s, %s, %d // load decimal %s", "LDI", reg[ac], result, node.matches[0]);
-				break;
-
-			case "Zero.Hexadecimal":
-				auto result = to!long(node.matches[0], 16);
-                emitRM("LDI", ac, result, 0, "load hexadecimal %s", node.matches[0]);
-                //emitCode("%5s, %s, %d // load hexadecimal %s", "LDI", reg[ac], result, node.matches[0]);
-				break;
-
-			case "Zero.Binary":
-				auto result = to!long(node.matches[0], 2);
-                emitRM("LDI", ac, result, 0, "load binary %s", node.matches[0]);
-                //emitCode("%5s, %s, %d // load binary %s", "LDI", reg[ac], result, node.matches[0]);
-				break;
-
-			case "Zero.RealLiteral":
-				auto result = to!double(node.matches[0]);
-                emitRM("LDR", ac, result, 0, "load double %s", node.matches[0]);
-                //emitCode("%5s, %s, %d // load double %s", "LDR", reg[ac], result, node.matches[0]);
-				break;
-
-            case "Zero.String":
-                emitRM("LDS", ac, node.matches[0], 0, "load string %s", node.matches[0]);
-                break;
-
             case "Zero.ExpressionStatement":
                 generateExpr(node.children[0]);
                 break;
-
-			case "Zero.CallExpr":
-                generateCall(node);
-				break;
 
 			default:
 				foreach (child; node.children)
@@ -264,199 +212,224 @@ private:
 		}
 	}
 
-    string generateExpr(ParseTree node)
+    Register generateExpr(ParseTree node, Register reg = Register.Invalid)
     {
-        string result = "";
+        Register result;
 
         switch (node.name)
 		{
             case "Zero.AssignExpr":
-                if (node.children.length > 1)
-                {
-                    generate(node.children[1]);
-                    auto var = allocator.FindVariable(node.matches[0]);
-                    if (var !is null)
-                        emitRM("ST", ac, var.offset, mp, "assign %s", node.matches[0]);
-                }
-                else
-                {
-                    generate(node.children[0]);
-                }
+                result = assign(node, reg);
                 break;
 
             case "Zero.TernaryExpr":
-                generateTernary(node);
+                result = generateTernary(node, reg);
                 break;
 
 			case "Zero.AddExpr":
-                auto lhs = generateExpr(node.children[0]);
-                auto rhs = generateExpr(node.children[2]);
-                result = allocator.AllocateRegister();
-                auto op = InstructionSet.ADD;
-                if (node.children[1].matches[0] == "-")
-                    op = InstructionSet.SUB;
-                else if (node.children[1].matches[0] == "~")
-                    op = InstructionSet.CAT;
-                emit(op, result, lhs, rhs);
-                break;
-
 			case "Zero.MulExpr":
-                auto lhs = generateExpr(node.children[0]);
-                auto rhs = generateExpr(node.children[2]);
-                result = allocator.AllocateRegister();
-                auto op = InstructionSet.MUL;
-                if (node.children[1].matches[0] == "/")
-                    op = InstructionSet.DIV;
-                else if (node.children[1].matches[0] == "%")
-                    op = InstructionSet.MOD;
-                emit(op, result, lhs, rhs);
-                break;
-
 			case "Zero.CompareExpr":
-                auto lhs = generateExpr(node.children[0]);
-                auto rhs = generateExpr(node.children[2]);
-                result = allocator.AllocateRegister();
-                auto op = InstructionSet.LE;
-                auto isNotIn = false;
-                switch (node.children[1].matches[0])
-                {
-                    case "<=":
-                        op = InstructionSet.LE;
-                        break;
-
-                    case "<":
-                        op = InstructionSet.LT;
-                        break;
-
-                    case "=":
-                        op = InstructionSet.EQ;
-                        break;
-
-                    case ">=":
-                        op = InstructionSet.GE;
-                        break;
-
-                    case ">":
-                        op = InstructionSet.GT;
-                        break;
-
-                    case "!=":
-                        op = InstructionSet.NE;
-                        break;
-
-                    case "in":
-                        op = InstructionSet.IN;
-                        break;
-
-                    case "!in":
-                        op = InstructionSet.IN;
-                        isNotIn = true;
-                        break;
-
-                    default:
-                        break;
-                }
-                emit(op, result, lhs, rhs);
-                if (isNotIn)
-                    emit(InstructionSet.NOT, result, result);
-                break;
-
 			case "Zero.OrExpr":
-                auto lhs = generateExpr(node.children[0]);
-                auto rhs = generateExpr(node.children[2]);
-                result = allocator.AllocateRegister();
-                emit(InstructionSet.OR, result, lhs, rhs);
-                break;
-
 			case "Zero.AndExpr":
-                auto lhs = generateExpr(node.children[0]);
-                auto rhs = generateExpr(node.children[2]);
-                result = allocator.AllocateRegister();
-                emit(InstructionSet.AND, result, lhs, rhs);
-                break;
-
             case "Zero.PowExpr":
-                auto lhs = generateExpr(node.children[0]);
-                auto rhs = generateExpr(node.children[2]);
-                result = allocator.AllocateRegister();
-                emit(InstructionSet.POW, result, lhs, rhs);
+                result = generateBinary(node, reg);
                 break;
 
 			case "Zero.NotExpr":
-				auto lhs = generateExpr(node.children[0]);
-				result = allocator.AllocateRegister();
-                emit(InstructionSet.NOT, result, lhs);
+				result = generateExpr(node.children[0], reg);
+                emit(InstructionSet.NOT, result, result);
 				break;
 
             case "Zero.SignExpr":
-				generate(node.children[0]);
+				result = generateExpr(node.children[1], reg);
                 if (node.matches[0] == "-")
-				    emitRO("NEG", ac, ac, 0, "op -");
+				    emit(InstructionSet.NEG, result, result);
                 break;
 
 			case "Zero.VarIdentifier":
                 auto var = allocator.FindVariable(node.matches[0]);
                 if (var !is null)
-				    emitRM("LDV", ac, var.offset, mp, "load var %s", node.matches[0]);
+                    result = var.toRegister();
 				break;
 
 			case "Zero.Decimal":
 				auto value = to!long(node.matches[0]);
-                auto c = allocator.AllocateConst(value);
-                result = allocator.AllocateRegister();
-                emit(InstructionSet.MOV, result, c);
+                result = literal(value, reg);
 				break;
 
 			case "Zero.Hexadecimal":
 				auto value = to!long(node.matches[0], 16);
-                auto c = allocator.AllocateConst(value);
-                result = allocator.AllocateRegister();
-                emit(InstructionSet.MOV, result, c);
+                result = literal(value, reg);
+				break;
+
+            case "Zero.Octal":
+				auto value = to!long(node.matches[0], 8);
+                result = literal(value, reg);
 				break;
 
 			case "Zero.Binary":
 				auto value = to!long(node.matches[0], 2);
-                auto c = allocator.AllocateConst(value);
-                result = allocator.AllocateRegister();
-                emit(InstructionSet.MOV, result, c);
+                result = literal(value, reg);
 				break;
 
 			case "Zero.RealLiteral":
 				auto value = to!double(node.matches[0]);
-                auto c = allocator.AllocateConst(value);
-                result = allocator.AllocateRegister();
-                emit(InstructionSet.MOV, result, c);
+                result = literal(value, reg);
 				break;
 
             case "Zero.RawString":
             case "Zero.QuotedString":
-                auto c = allocator.AllocateConst(node.matches[0][1..$-1]);
-                result = allocator.AllocateRegister();
-                emit(InstructionSet.MOV, result, c);
+                auto value = node.matches[0][1..$-1];
+                result = literal(value, reg);
                 break;
 
-                //case "Zero.ExpressionStatement":
-                //    generateExpression(node.children[0]);
-                //    break;
-
 			case "Zero.CallExpr":
-                generateCall(node);
+                result = generateCall(node);
 				break;
+
+            case "Zero.True":
+                result = literalRegister(trueLiteral);
+                break;
+
+            case "Zero.False":
+                result = literalRegister(falseLiteral);
+                break;
+
+            case "Zero.Null":
+                result = literalRegister(nullLiteral);
+                break;
+
+            case "Zero.This":
+                result = literalRegister(thisLiteral);
+                break;
+
+            case "Zero.MemberCall":
+                result = generateMember(node, reg);
+                break;
+
+            case "Zero.TableIndex":
+            case "Zero.ArrayIndex":
+                result = index(node, reg);
+                break;
+
+            case "Zero.ArrayExpr":
+                result = arrayExpr(node, reg);
+                break;
+
+            case "Zero.TableExpr":
+                result = tableExpr(node, reg);
+                break;
 
 			default:
 				foreach (child; node.children)
 					generate(child);
 				break;
 		}
+
         return result;
+    }
+
+    Register useOrNewReg(Register reg)
+    {
+        auto result = reg == Register.Invalid ? allocator.AllocateRegister() : reg;
+        return result;
+    }
+
+    Register arrayExpr(ParseTree node, Register reg)
+    {
+        auto result = useOrNewReg(reg);
+        emit(InstructionSet.ARRY, result, node.children.length);
+        auto index = allocator.AllocateRegister();
+        foreach (i, child; node.children)
+        {
+            emit(InstructionSet.GET, index, result, literal(i));
+            emit(InstructionSet.MOV, index, generateExpr(child));
+        }
+        return result;
+    }
+
+    Register tableExpr(ParseTree node, Register reg)
+    {
+        auto result = useOrNewReg(reg);
+        emit(InstructionSet.TAB, result, node.children.length);
+        auto index = allocator.AllocateRegister();
+        int value = 0;
+        foreach (child; node.children)
+        {
+            auto index = generateExpr(child.children[0], index);
+            emit(InstructionSet.GET, index, result, index);
+            if (child.children.length > 1)
+                emit(InstructionSet.MOV, index, generateExpr(child.children[1]));
+            else
+                emit(InstructionSet.MOV, index, literal(value));
+        }
+        return result;
+    }
+
+    Register assign(ParseTree node, Register reg)
+    {
+        auto result = generateExpr(node.children[0]);
+        auto value = generateExpr(node.children[1], result);
+        if (value != result)
+            emit(InstructionSet.MOV, result, value);
+        return result;
+    }
+
+    Register index(ParseTree node, Register reg)
+    {
+        auto o = generateExpr(node.children[0], reg);
+        auto i = generateExpr(node.children[1]);
+        auto result = useOrNewReg(reg);
+        emit(InstructionSet.GET, result, o, i);
+        return result;
+    }
+
+    Register generateMember(ParseTree node, Register reg)
+    {
+        auto o = generateExpr(node.children[0], reg);
+        auto f = allocator.AllocateLiteral(node.children[1].matches[0]);
+        auto result = useOrNewReg(reg);
+        emit(InstructionSet.GET, result, o, f);
+        return result;
+    }
+
+    Register literal(T)(T value, Register reg)
+    {
+        //auto c = allocator.AllocateLiteral(value);
+        //auto result = reg == Register.Invalid ? allocator.AllocateRegister() : reg;
+        //emit(InstructionSet.MOV, result, c);
+        return allocator.AllocateLiteral(value);
+    }
+
+    Register literal(long value, Register reg = Register.Invalid)
+    {
+        if (value <= maxLiteral && value >= minLiteral)
+        {
+            Literal l;
+            l.type = LiteralType.Integer;
+            l.value = cast(byte)value;
+            return Register(l.number, RegisterType.Literal);
+        }
+
+        //auto c = allocator.AllocateLiteral(value);
+        //auto result = reg == Register.Invalid ? allocator.AllocateRegister() : reg;
+        //emit(InstructionSet.MOV, result, c);
+        return allocator.AllocateLiteral(value);;
+    }
+
+    Register literalRegister(Literal literal)
+    {
+        return Register(literal.number, RegisterType.Literal);
     }
 
     void generateBlock(ParseTree node)
     {
+        allocator.EnterScope();
         foreach (child; node.children)
         {
             generate(child);
         }
+        allocator.LeaveScope();
     }
 
     void generateVar(ParseTree node)
@@ -473,12 +446,11 @@ private:
             auto var = allocator.AllocateVariable(decl.matches[0], varScope);
             if (decl.name == "Zero.VarExpression")
             {
-                generate(decl.children[1]);
-                emitRM("ST", ac, var.offset, mp, "assign %s", var.name);
+                auto value = generateExpr(decl.children[1], var.toRegister());
+                if (value.type == RegisterType.Literal ||
+                    value.type == RegisterType.Const)
+                    emit(InstructionSet.MOV, var, value);
             }
-            //if (decl.children.length > 1)
-            //{
-            //}
         }
     }
 
@@ -606,14 +578,16 @@ private:
         emitComment("----> for");
         generate(init);
         beginLoc = emitSkip(0);
-        generate(stop);
+        auto stopCond = generateExpr(stop);
         auto jmp2EndLoc = emitSkip(1);
         generate(stmt);
         if (cond.children.length > 2)
             generate(cond.children[2]);
+        emitAbs(InstructionSet.JMP, beginLoc);
         endLoc = emitSkip(0);
         emitBackup(jmp2EndLoc);
-        emitRM_Abs("JEQ", ac, endLoc, "for: jmp to end");
+        emitAbs(InstructionSet.JNE, stopCond, endLoc);
+        //emitRM_Abs("JEQ", ac, endLoc, "for: jmp to end");
         emitRestore();
         emitComment("<---- for");
     }
@@ -637,28 +611,64 @@ private:
 
     void generateReturn(ParseTree node)
     {
-        if (node.children.length > 1)
+        if (node.children.length > 0)
         {
-            generate(node.children[0]);
+            auto result = generateExpr(node.children[0]);
+            emit(InstructionSet.RET, 1, result);
         }
-        BackPatchHelper.AddLocation(emitSkip(1));
+        else
+        {
+            emit(InstructionSet.RET, 0, 0);
+        }
+        //BackPatchHelper.AddLocation(emitSkip(1));
     }
 
     void generateFunction(ParseTree node)
     {
         BackPatchHelper helper = BackPatchHelper("return", &this);
 
+        allocator.AllocateFunction(node.matches[0], emitLoc);
+
         emitComment("----> function");
-        emitCode("%5s %s", "PROC", node.matches[0]);
-        appendComment("function %s", node.matches[0]);
+        auto func = emitSkip(1);
+
+        allocator.EnterFunction();
+        //emitCode("%5s %s", "PROC", node.matches[0]);
+        //appendComment("function %s", node.matches[0]);
+
+        generateVar(node.children[0]);
+
+        auto stmt = node.children[1];
+        if (node.children.length == 3)
+            stmt = node.children[2];
+
+        generate(stmt);
+        emit(InstructionSet.RET, 0, 0);
         endLoc = emitSkip(0);
-        emitCode("%5s", "RET");
+        //emitCode("%5s", "RET");
         emitComment("<---- function");
+        emitBackup(func);
+        emit(InstructionSet.PROC, endLoc - func);
+        appendComment("function %s", node.matches[0]);
+        emitRestore();
+
+        allocator.LeaveFunction();
     }
 
-    void generateCall(ParseTree node)
+    Register generateCall(ParseTree node)
     {
-        //generate(node.children[0]);
+        auto result = allocator.AllocateRegister();
+        auto f = generateExpr(node.children[0], result);
+        foreach (child; node.children[1].children)
+        {
+            auto p = allocator.AllocateRegister();
+            auto pp = generateExpr(child, p);
+            if (pp != p)
+            {
+                emit(InstructionSet.MOV, p, pp);
+            }
+        }
+        emit(InstructionSet.CALL, f, node.children[1].children.length);
         //if (node.children.length > 1)
         //{
         //    emitRM("ST", ac, tmpOffset--, mp, "op: push left");
@@ -671,138 +681,116 @@ private:
         //emitRM("ST", fp, tmpOffset--, mp, "save fp");
         //emitRO("LDI", fp, sp, 0);
         //emitRO("CALL", ac, ac1, ac, "call");
+        return result;
     }
 
-    void generateTernary(ParseTree node)
+    Register generateTernary(ParseTree node, Register reg)
     {
+        auto result = reg == Register.Invalid ? allocator.AllocateRegister() : reg;
         auto cond = generateExpr(node.children[0]);
-        if (node.children.length > 2)
-        {
-            auto jmp2SecondLoc = emitSkip(1);
-            generate(node.children[1]);
-            auto jmp2EncLoc = emitSkip(1);
-            auto secondLoc = emitSkip(0);
-            generate(node.children[2]);
-            auto endLoc = emitSkip(0);
-            emitBackup(jmp2SecondLoc);
-            emitRM_Abs("JEQ", ac, secondLoc, "jmp to second");
-            emitBackup(jmp2EncLoc);
-            emitRM_Abs("LDA", pc, endLoc, "jmp to end");
-            emitRestore();
-        }
+        auto jmp2SecondLoc = emitSkip(1);
+        auto first = generateExpr(node.children[1]);
+        emit(InstructionSet.MOV, result, first);
+        auto jmp2EncLoc = emitSkip(1);
+        auto secondLoc = emitSkip(0);
+        auto second = generateExpr(node.children[2]);
+        emit(InstructionSet.MOV, result, second);
+        auto endLoc = emitSkip(0);
+        emitBackup(jmp2SecondLoc);
+        //emitRM_Abs("JEQ", ac, secondLoc, "jmp to second");
+        emitAbs(InstructionSet.JNE, cond, secondLoc);
+        emitBackup(jmp2EncLoc);
+        //emitRM_Abs("LDA", pc, endLoc, "jmp to end");
+        emitAbs(InstructionSet.JMP, endLoc);
+        emitRestore();
+        return result;
     }
 
-    void generateBinary(ParseTree node)
+    Register generateBinary(ParseTree node, Register reg)
     {
-        generate(node.children[0]);
-        if (node.children.length > 2)
+        auto lhs = generateExpr(node.children[0], reg);
+        auto rhs = generateExpr(node.children[2]);
+        auto result = reg == Register.Invalid ? allocator.AllocateRegister() : reg;
+
+        auto op = InstructionSet.ADD;
+        auto isNotIn = false;
+        final switch (node.children[1].matches[0])
         {
-            emitRM("ST", ac, tmpOffset--, mp, "op: push left");
-            generate(node.children[2]);
-            emitRM("LD", ac1, ++tmpOffset, mp, "op: load left");
+            case "+":
+                op = InstructionSet.ADD;
+                break;
 
-            final switch (node.children[1].matches[0])
-            {
-                case "+":
-                    emitRO("ADD", ac, ac1, ac, "op %s", node.children[1].matches[0]);
-                    break;
+            case "-":
+                op = InstructionSet.SUB;
+                break;
 
-                case "-":
-                    emitRO("SUB", ac, ac1, ac, "op %s", node.children[1].matches[0]);
-                    break;
+            case "~":
+                op = InstructionSet.CAT;
+                break;
 
-                case "~":
-                    emitRO("CAT", ac, ac1, ac, "op %s", node.children[1].matches[0]);
-                    break;
+            case "*":
+                op = InstructionSet.MUL;
+                break;
 
-                case "*":
-                    emitRO("MUL", ac, ac1, ac, "op %s", node.children[1].matches[0]);
-                    break;
+            case "/":
+                op = InstructionSet.DIV;
+                break;
 
-                case "/":
-                    emitRO("DIV", ac, ac1, ac, "op %s", node.children[1].matches[0]);
-                    break;
+            case "%":
+                op = InstructionSet.MOD;
+                break;
 
-                case "%":
-                    emitRO("MOD", ac, ac1, ac, "op %s", node.children[1].matches[0]);
-                    break;
+            case "^":
+                op = InstructionSet.POW;
+                break;
 
-                case "^":
-                    emitRO("POW", ac, ac1, ac, "op %s", node.children[1].matches[0]); 
-                    break;
+            case "or":
+                op = InstructionSet.OR;
+                break;
 
-                case "or":
-                    emitRO("OR", ac, ac1, ac, "op %s", node.children[1].matches[0]);
-                    break;
+            case "and":
+                op = InstructionSet.AND;
+                break;
 
-                case "and":
-                    emitRO("AND", ac, ac1, ac, "op %s", node.children[1].matches[0]);
-                    break;
+            case "<":
+                op = InstructionSet.LT;
+                break;
 
-                case "<":
-                    /*emitRO("SUB",ac,ac1,ac, "op %s", node.children[1].matches[0]);
-                    emitRM("JLT",ac,2,pc,"br if true");
-                    emitRM("LDI",ac,0,ac,"false case");
-                    emitRM("LDA",pc,1,pc,"unconditional jmp");
-                    emitRM("LDI",ac,1,ac,"true case");*/
-                    emitRO("LT", ac, ac1, ac, "op %s", node.children[1].matches[0]);
-                    break;
+            case "=" :
+                op = InstructionSet.EQ;
+                break;
 
-                case "=" :
-                    /*emitRO("SUB",ac,ac1,ac, "op %s", node.children[1].matches[0]);
-                    emitRM("JEQ",ac,2,pc,"br if true");
-                    emitRM("LDI",ac,0,ac,"false case");
-                    emitRM("LDA",pc,1,pc,"unconditional jmp");
-                    emitRM("LDI",ac,1,ac,"true case");*/
-                    emitRO("EQ", ac, ac1, ac, "op %s", node.children[1].matches[0]);
-                    break;
+            case "<=" :
+                op = InstructionSet.LE;
+                break;
 
-                case "<=" :
-                    /*emitRO("SUB",ac,ac1,ac, "op %s", node.children[1].matches[0]);
-                    emitRM("JLE",ac,2,pc,"br if true");
-                    emitRM("LDI",ac,0,ac,"false case");
-                    emitRM("LDA",pc,1,pc,"unconditional jmp");
-                    emitRM("LDI",ac,1,ac,"true case");*/
-                    emitRO("LE", ac, ac1, ac, "op %s", node.children[1].matches[0]);
-                    break;
+            case ">" :
+                op = InstructionSet.GT;
+                break;
 
-                case ">" :
-                    /*emitRO("SUB",ac,ac1,ac, "op %s", node.children[1].matches[0]);
-                    emitRM("JGT",ac,2,pc,"br if true");
-                    emitRM("LDI",ac,0,ac,"false case");
-                    emitRM("LDA",pc,1,pc,"unconditional jmp");
-                    emitRM("LDI",ac,1,ac,"true case");*/
-                    emitRO("GT", ac, ac1, ac, "op %s", node.children[1].matches[0]);
-                    break;
+            case ">=" :
+                op = InstructionSet.GE;
+                break;
 
-                case ">=" :
-                    /*emitRO("SUB",ac,ac1,ac, "op %s", node.children[1].matches[0]);
-                    emitRM("JGE",ac,2,pc,"br if true");
-                    emitRM("LDI",ac,0,ac,"false case");
-                    emitRM("LDA",pc,1,pc,"unconditional jmp");
-                    emitRM("LDI",ac,1,ac,"true case");*/
-                    emitRO("GE", ac, ac1, ac, "op %s", node.children[1].matches[0]);
-                    break;
+            case "!=" :
+                op = InstructionSet.NE;
+                break;
 
-                case "!=" :
-                    /*emitRO("SUB",ac,ac1,ac, "op %s", node.children[1].matches[0]);
-                    emitRM("JNE",ac,2,pc,"br if true");
-                    emitRM("LDI",ac,0,ac,"false case");
-                    emitRM("LDA",pc,1,pc,"unconditional jmp");
-                    emitRM("LDI",ac,1,ac,"true case");*/
-                    emitRO("NE", ac, ac1, ac, "op %s", node.children[1].matches[0]);
-                    break;
+            case "in":
+                op = InstructionSet.IN;
+                break;
 
-                case "in":
-                    emitRO("IN", ac, ac1, ac, "op %s", node.children[1].matches[0]);
-                    break;
-
-                case "!in":
-                    emitRO("IN", ac, ac1, ac, "op %s", node.children[1].matches[0]);
-                    emitRO("NOT", ac, ac, ac);
-                    break;
-            }
+            case "!in":
+                op = InstructionSet.IN;
+                isNotIn = true;
+                break;
         }
+
+        emit(op, result, lhs, rhs);
+        if (isNotIn)
+            emit(InstructionSet.NOT, result, result);
+
+        return result;
     }
 
 	void updateHighEmitLoc()
@@ -823,7 +811,7 @@ private:
 	{
         if (fmt != "")
         {
-            formatCode("        // ");
+            formatCode("        ; ");
             formatCode(fmt, args);
         }
         formatCode("\n");
@@ -834,7 +822,7 @@ private:
         if (fmt != "")
         {
             --emitLoc;
-            formatCode(" // ");
+            formatCode(" ; ");
             formatCode(fmt, args);
             ++emitLoc;
         }
@@ -869,40 +857,40 @@ private:
         updateHighEmitLoc();
 	}
 
-    void emitRO(string op)
-	{
-		emitCode("%5s");
-	}
-
-    void emitRO(string op, int r, int s, int t)
-	{
-		emitCode("%5s %s, %s, %s", op, r, s, t);
-        //updateHighEmitLoc();
-	}
-
-	void emitRO(Char, A...)(string op, int r, int s, int t, in Char[] fmt, A args)
-	{
-		emitRO(op, r, s, t);
-        appendComment(fmt, args);
-	}
-
-    void emitRM(T)(string op, int r, T d, int s) if (!isSomeString!T)
-	{
-		emitCode("%5s %s, %s(%s)", op, r, d, s);
-        //updateHighEmitLoc();
-	}
-
-    void emitRM(T)(string op, int r, T d, int s) if (isSomeString!T)
-	{
-		emitCode("%5s %s, \"%s\"(%s)", op, r, d, s);
-        //updateHighEmitLoc();
-	}
-
-	void emitRM(T, Char, A...)(string op, int r, T d, int s, in Char[] fmt, A args)
-	{
-		emitRM(op, r, d, s);
-        appendComment(fmt, args);
-	}
+    //void emitRO(string op)
+    //{
+    //    emitCode("%5s");
+    //}
+    //
+    //void emitRO(string op, int r, int s, int t)
+    //{
+    //    emitCode("%5s %s, %s, %s", op, r, s, t);
+    //    //updateHighEmitLoc();
+    //}
+    //
+    //void emitRO(Char, A...)(string op, int r, int s, int t, in Char[] fmt, A args)
+    //{
+    //    emitRO(op, r, s, t);
+    //    appendComment(fmt, args);
+    //}
+    //
+    //void emitRM(T)(string op, int r, T d, int s) if (!isSomeString!T)
+    //{
+    //    emitCode("%5s %s, %s(%s)", op, r, d, s);
+    //    //updateHighEmitLoc();
+    //}
+    //
+    //void emitRM(T)(string op, int r, T d, int s) if (isSomeString!T)
+    //{
+    //    emitCode("%5s %s, \"%s\"(%s)", op, r, d, s);
+    //    //updateHighEmitLoc();
+    //}
+    //
+    //void emitRM(T, Char, A...)(string op, int r, T d, int s, in Char[] fmt, A args)
+    //{
+    //    emitRM(op, r, d, s);
+    //    appendComment(fmt, args);
+    //}
 
 	int emitSkip(int howMany)
 	{
@@ -928,20 +916,22 @@ private:
     {
         auto addr = format("%d(%d)", loc - (emitLoc + 1), RegisterType.Literal);
         emit(op, r, addr);
+        appendComment("%d", loc);
     }
 
     void emitAbs(O)(O op, int loc)
     {
         auto addr = format("%d(%d)", loc - (emitLoc + 1), RegisterType.Literal);
         emit(op, addr);
+        appendComment("%d", loc);
     }
 
-	void emitRM_Abs(Char, A...)(string op, int r, int a, in Char[] fmt, A args)
-	{
-		emitCode("%5s %d, %d(%d)", op, r, a-(emitLoc+1), pc);
-        appendComment(fmt, args);
-        //updateHighEmitLoc();
-	}
+    //void emitRM_Abs(Char, A...)(string op, int r, int a, in Char[] fmt, A args)
+    //{
+    //    emitCode("%5s %d, %d(%d)", op, r, a-(emitLoc+1), pc);
+    //    appendComment(fmt, args);
+    //    //updateHighEmitLoc();
+    //}
 }
 
 void traverse(ParseTree node, void delegate(ParseTree) prevProc, void delegate(ParseTree) postProc)

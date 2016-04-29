@@ -24,17 +24,45 @@ class Variable
         this.offset = offset;
         this.depth = depth;
     }
+
+    override string toString()
+    {
+        if (varScope == EVarScope.Local)
+        {
+            return format("%d(%d)", offset, RegisterType.Local);
+        }
+
+        return format("%d(%d)", offset, RegisterType.Global);
+    }
+
+    Register toRegister()
+    {
+        Register r;
+        r.offset = offset;
+        if (varScope == EVarScope.Local)
+            r.type = RegisterType.Local;
+        else
+            r.type = RegisterType.Global;
+        return r;
+    }
 }
 
 enum RegisterType
 {
-    Local = 0, Global, Const, Literal
+    Local = 0, Global, Const, Literal, Count
 }
 
 struct Register
 {
-    int offset;
-    RegisterType type;
+    int offset = 0;
+    RegisterType type = RegisterType.Count;
+
+    static Register Invalid = {0, RegisterType.Count};
+
+    string toString()
+    {
+        return format("%d(%d)", offset, type);
+    }
 }
 
 struct Allocator
@@ -94,6 +122,7 @@ public:
                 auto abs = bp[$-1]+sp;
                 sp++;
                 localStack[abs] = result;
+                tempCount = 0;
                 break;
         }
         return result;
@@ -120,21 +149,21 @@ public:
         return null;
     }
 
-    string AllocateConst(T)(T value)
+    Register AllocateLiteral(T)(T value)
     {
-        auto map = FindConst(value);
+        auto map = FindLiteral(value);
         if (map >= 0)
         {
-            return format("%d(%d)", map, RegisterType.Const);
+            return Register(map, RegisterType.Const);
         }
         auto offset = constStack.data.length;
         constStack.put(pack(value));
         constCount++;
-        AddConst(value, offset);
-        return format("%d(%d)", offset, RegisterType.Const);
+        AddLiteral(value, offset);
+        return Register(offset, RegisterType.Const);
     }
 
-    int FindConst(long value)
+    int FindLiteral(long value)
     {
         auto map = value in longMap;
         if (map !is null)
@@ -144,7 +173,7 @@ public:
         return -1;
     }
 
-    int FindConst(double value)
+    int FindLiteral(double value)
     {
         auto map = value in doubleMap;
         if (map !is null)
@@ -154,7 +183,7 @@ public:
         return -1;
     }
 
-    int FindConst(string value)
+    int FindLiteral(string value)
     {
         auto map = value in stringMap;
         if (map !is null)
@@ -164,29 +193,24 @@ public:
         return -1;
     }
 
-    void AddConst(long value, int offset)
+    void AddLiteral(long value, int offset)
     {
         longMap[value] = offset;
     }
 
-    void AddConst(double value, int offset)
+    void AddLiteral(double value, int offset)
     {
         doubleMap[value] = offset;
     }
 
-    void AddConst(string value, int offset)
+    void AddLiteral(string value, int offset)
     {
         stringMap[value] = offset;
     }
 
-    string AllocateRegister()
+    Register AllocateRegister()
     {
-        return format("%d(%d)", freeReg++, RegisterType.Local);
-    }
-
-    string LastRegister()
-    {
-        return format("%d(%d)", freeReg, RegisterType.Local);
+        return Register(sp + tempCount++, RegisterType.Local);
     }
 
     const(ubyte[]) ConstData() @property
@@ -199,6 +223,23 @@ public:
         return constCount;
     }
 
+    bool AllocateFunction(string name, int loc)
+    {
+        auto f = name in functionMap;
+        if (f !is null)
+            return false;
+        functionMap[name] = loc;
+        return true;
+    }
+
+    int FindFunction(string name)
+    {
+        auto f = name in functionMap;
+        if (f !is null)
+            return *f;
+        return functionMap[name];
+    }
+
 private:
     static immutable StackSize = 128;
 
@@ -208,6 +249,7 @@ private:
     int[long] longMap;
     int[double] doubleMap;
     int[string] stringMap;
+    int[string] functionMap;
 
     int[] bp;
     SList!int fp;
@@ -216,5 +258,5 @@ private:
     int globalSP = 0;
     int depth = 0;
     int constCount = 0;
-    int freeReg = 0;
+    int tempCount = 0;
 }

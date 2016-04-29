@@ -87,17 +87,15 @@ int main(string[] argv)
 		auto parsedTree = Zero(line);
         auto simplified = parsedTree.dup;
         simplified = simplifyParseTree(simplified);
-		//writeln(parsedTree);
 		if (!parsedTree.successful)
 			writeln(parsedTree.failMsg);
 		else
 			writeln(parsedTree.matches);
-		//calc(parsedTree);
-		writeln(parsedTree);
-        writeln();
+        //writeln(parsedTree);
+        //writeln();
 		writeln(simplified);
-        writeln();
 		writeln(generate(simplified));
+        writeln();
 	}
     return 0;
 }

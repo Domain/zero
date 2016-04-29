@@ -45,11 +45,11 @@ ParseTree simplifyParseTree(ParseTree p)
         case "Zero.Program":
         case "Zero.FunctionStatement":
         case "Zero.ReturnStatement":
-        case "Zero.ArrayExpr":
         case "Zero.RawString":
         case "Zero.QuotedString":
-        case "Zero.TableExpr":
         case "Zero.ExpressionStatement":
+        case "Zero.ConstExpr":
+        case "Zero.TableElement":
             return simplifyChildren(p);
 
         case "Zero.Parameters":
@@ -63,6 +63,12 @@ ParseTree simplifyParseTree(ParseTree p)
 
         case "Zero.ConstStatement":
             return discardFirstChild(simplifyChildren(p), "Zero.ConstDeclarationList");
+
+        case "Zero.ArrayExpr":
+            return discardFirstChild(simplifyChildren(p), "Zero.ArrayElement");
+
+        case "Zero.TableExpr":
+            return discardFirstChild(simplifyChildren(p), "Zero.TableElementList");
 
         default:
             return simplifyAll(p);

@@ -1,0 +1,17 @@
+{
+	"name": "zero",
+	"authors": [
+		"Domain"
+	],
+	"dependencies": {
+		"pegged": "~>0.4.4",
+		"msgpack-d": "~>1.0.0-beta.7"
+	},
+	"description": "zero language",
+	"copyright": "Copyright © 2018, Domain",
+	"license": "proprietary",
+	"targetPath": "$HOME/bin",
+	"postBuildCommands": [
+		"chmod a+x $HOME/bin/zero"
+	]
+}

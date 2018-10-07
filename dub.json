@@ -10,8 +10,5 @@
 	"description": "zero language",
 	"copyright": "Copyright © 2018, Domain",
 	"license": "proprietary",
-	"targetPath": "$HOME/bin",
-	"postBuildCommands": [
-		"chmod a+x $HOME/bin/zero"
-	]
+	"targetPath": "./bin"
 }

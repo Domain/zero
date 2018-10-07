@@ -2,6 +2,8 @@ import std.stdio;
 import std.getopt;
 import zero.grammar;
 import zero.parser;
+import zero.analyzer;
+import zero.generator;
 
 int main(string[] args)
 {
@@ -51,6 +53,11 @@ int main(string[] args)
 		else
 			writeln(parsedTree.matches);
         writeln(parsedTree);
+        writeln();
+        auto simplified = simplifyParseTree(parsedTree.dup);
+        writeln(simplified);
+        writeln();
+        writeln(generate(simplified));
         writeln();
 	}
 

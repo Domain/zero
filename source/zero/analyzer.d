@@ -73,8 +73,6 @@ ParseTree simplifyParseTree(ParseTree p)
         default:
             return simplifyAll(p);
     }
-
-    return p;
 }
 
 private SyntaxTree build(ParseTree node)
@@ -99,6 +97,8 @@ private SyntaxTree build(ParseTree node)
                 result = build(node.children[0]);
                 break;
             }
+
+            goto default;
             /*else
             {
                 result = new SyntaxTree();

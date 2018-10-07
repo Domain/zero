@@ -5,13 +5,50 @@ import zero.parser;
 import zero.analyzer;
 import zero.generator;
 
+string help(string program, GetoptResult result)
+{
+    import std.array : appender;
+
+    static string usage = null;
+
+    if (usage !is null)
+        return usage;
+
+    auto buffer = appender!string;
+    buffer ~= "Usage: ";
+    buffer ~= program;
+    buffer ~= " [options] [files...]\n";
+    buffer ~= "options: ";
+
+    defaultGetoptFormatter(buffer, "", result.options);
+    usage = buffer.data;
+
+    return usage;
+}
+
+void parse(string code)
+{
+    auto pt = Zero(code);
+    if (!pt.successful)
+	    writeln(pt.failMsg);
+    else
+	    writeln(pt.matches);
+    writeln(pt);
+    writeln();
+    auto simplified = simplifyParseTree(pt.dup);
+    writeln(simplified);
+    writeln();
+    writeln(generate(simplified));
+    writeln();
+}
+
 int main(string[] args)
 {
     auto verbose = false;
     auto buildParser = false;
     string output = "a.out";
 
-    auto help = getopt(
+    auto options = getopt(
         args,
         std.getopt.config.bundling,
         std.getopt.config.passThrough,
@@ -20,10 +57,9 @@ int main(string[] args)
         "output|o", "output file name", &output
     );
 
-    if (help.helpWanted)
+    if (options.helpWanted)
     {
-        defaultGetoptPrinter("Some information about the program.",
-            help.options);
+        writeln(help(args[0], options));
         return 0;
     }
 
@@ -33,32 +69,21 @@ int main(string[] args)
         return 0;
     }
 
-    if (args.length <= 1)
+    if (args.length > 1)
     {
-        defaultGetoptPrinter("Some information about the program.",
-            help.options);
+        import std.file : readText;
+
+        auto inputs = args[1..$];
+        foreach (f; inputs)
+            parse(f.readText);
+
         return 0;
     }
-
-    auto inputs = args[1..$];
-    foreach (f; inputs)
-        writefln("input %s", f);
 
     string line;
 	while ((line = readln()) !is null)
 	{
-		auto parsedTree = Zero(line);
-		if (!parsedTree.successful)
-			writeln(parsedTree.failMsg);
-		else
-			writeln(parsedTree.matches);
-        writeln(parsedTree);
-        writeln();
-        auto simplified = simplifyParseTree(parsedTree.dup);
-        writeln(simplified);
-        writeln();
-        writeln(generate(simplified));
-        writeln();
+        parse(line);
 	}
 
     return 0;

@@ -1,16 +1,20 @@
 module zero.analyzer;
 
-import pegged.peg : ParseTree;
+import pegged.peg : ParseTree, position;
+import zero.symboltable;
 
 class SyntaxTree
 {
     ParseTree node;
+    Symbol symbol;
     SyntaxTree[] children;
 }
 
 SyntaxTree buildSyntaxTree(ParseTree root)
 {
-    auto tree = build(root);
+    auto tree = buildTree(root);
+    auto stack = new SymbolTableStack();
+    buildTables(tree, stack);
     return tree;
 }
 
@@ -75,13 +79,13 @@ ParseTree simplifyParseTree(ParseTree p)
     }
 }
 
-private SyntaxTree build(ParseTree node)
+private SyntaxTree buildTree(ParseTree node)
 {
     SyntaxTree result = null;
     switch (node.name)
     {
         case "Zero.Expression":
-            result = build(node.children[0]);
+            result = buildTree(node.children[0]);
             break;
 
         case "Zero.AssignExpr":
@@ -94,7 +98,7 @@ private SyntaxTree build(ParseTree node)
         case "Zero.PowExpr":
             if (node.children.length == 1)
             {
-                result = build(node.children[0]);
+                result = buildTree(node.children[0]);
                 break;
             }
 
@@ -105,7 +109,7 @@ private SyntaxTree build(ParseTree node)
                 result.node = node;
                 foreach (child; node.children)
                 {
-                    result.children ~= build(child);
+                    result.children ~= buildTree(child);
                 }
             }
             break;*/
@@ -115,9 +119,42 @@ private SyntaxTree build(ParseTree node)
             result.node = node;
             foreach (child; node.children)
             {
-                result.children ~= build(child);
+                result.children ~= buildTree(child);
             }
             break;
     }
     return result;
+}
+
+private void buildTables(SyntaxTree node, SymbolTableStack stack)
+{
+    switch (node.node.name)
+    {
+        case "Zero.BlockStatement":
+            stack.push();
+            foreach (child; node.children)
+            {
+                buildTables(child, stack);
+            }
+            stack.pop();
+            break;
+
+        case "Zero.VarStatement":
+            auto name = node.children[0].children[0].node.matches[0];
+
+            if (node.node.matches[0] == "global")
+            {
+                node.symbol = stack.enterGlobal(name);
+            }
+            else
+            {
+                node.symbol = stack.enterLocal(name);
+            }
+
+            node.symbol.positions ~= position(node.node);
+            break;
+
+        default:
+            break;
+    }
 }

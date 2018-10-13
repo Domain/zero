@@ -10,5 +10,6 @@
 	"description": "zero language",
 	"copyright": "Copyright © 2018, Domain",
 	"license": "proprietary",
-	"targetPath": "./bin"
+	"targetPath": "./bin",
+	"libs-windows": ["Ws2_32"]
 }

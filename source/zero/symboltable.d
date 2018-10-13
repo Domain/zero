@@ -63,18 +63,18 @@ class SymbolTableStack
     SymbolTable pop()
     {
         --currentLevel;
-        auto table = tables[$-1];
-        tables = tables[0..$-1];
+        auto table = tables[$ - 1];
+        tables = tables[0 .. $ - 1];
         return table;
     }
 
-    SymbolTable localSymbolTable() @property 
+    SymbolTable localSymbolTable() @property
     {
         assert(currentLevel >= 0 && currentLevel < tables.length);
         return tables[currentLevel];
     }
 
-    SymbolTable globalSymbolTable() @property 
+    SymbolTable globalSymbolTable() @property
     {
         assert(currentLevel >= 0 && currentLevel < tables.length);
         return tables[0];
@@ -113,4 +113,3 @@ class SymbolTableStack
         return currentLevel;
     }
 }
-

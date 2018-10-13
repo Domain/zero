@@ -11,6 +11,13 @@ class SyntaxTree
     Symbol symbol;
     SyntaxTree[] children;
 
+    alias node this;
+
+    this(ParseTree pt)
+    {
+        node = pt;
+    }
+
     override string toString() const
     {
         return toString("");
@@ -32,37 +39,54 @@ class SyntaxTree
 
 SyntaxTree buildSyntaxTree(ParseTree root)
 {
+    scope (failure) writeln("Something wrong");
     auto tree = buildTree(root);
     auto stack = new SymbolTableStack();
     buildTables(tree, stack);
     return tree;
 }
 
-ParseTree simplifyChildren(ParseTree p)
+SyntaxTree simplifyChildren(ParseTree p)
 {
-    foreach(ref child; p.children)
-        child = simplifyParseTree(child);
-    return p;
+    auto node = new SyntaxTree(p);
+    foreach(child; p.children)
+        node.children ~= buildTree(child);
+    return node;
 }
 
-ParseTree simplifyAll(ParseTree p)
+SyntaxTree simplifyAll(ParseTree p)
 {
-    simplifyChildren(p);
+    auto node = simplifyChildren(p);
 
-    if (p.children.length != 1)
-        return p;
+    if (node.children.length != 1)
+        return node;
     else // linear tree
-        return p.children[0];
+        return buildTree(p.children[0]);
 }
 
-ParseTree discardFirstChild(Char)(ParseTree p, in Char[] name)
+SyntaxTree discardFirstChild(Char)(ParseTree p, in Char[] name)
 {
+    SyntaxTree node = new SyntaxTree(p);
     if (p.children.length == 1 && p.children[0].name == name)
-        p.children = p.children[0].children;
-    return p;
+    {
+        foreach (child; p.children[0].children)
+        {
+            auto childNode = buildTree(child);
+            node.children ~= childNode;
+        }
+    }
+    else
+    {
+        foreach (child; p.children)
+        {
+            auto childNode = buildTree(child);
+            node.children ~= childNode;
+        }
+    }
+    return node;
 }
 
-ParseTree simplifyParseTree(ParseTree p)
+SyntaxTree buildTree(ParseTree p)
 {
     switch (p.name)
     {
@@ -99,53 +123,6 @@ ParseTree simplifyParseTree(ParseTree p)
     }
 }
 
-private SyntaxTree buildTree(ParseTree node)
-{
-    SyntaxTree result = null;
-    switch (node.name)
-    {
-        case "Zero.Expression":
-            result = buildTree(node.children[0]);
-            break;
-
-        case "Zero.AssignExpr":
-        case "Zero.TernaryExpr":
-        case "Zero.OrExpr":
-        case "Zero.AndExpr":
-        case "Zero.CompareExpr":
-        case "Zero.AddExpr":
-        case "Zero.MulExpr":
-        case "Zero.PowExpr":
-            if (node.children.length == 1)
-            {
-                result = buildTree(node.children[0]);
-                break;
-            }
-
-            goto default;
-            /*else
-            {
-                result = new SyntaxTree();
-                result.node = node;
-                foreach (child; node.children)
-                {
-                    result.children ~= buildTree(child);
-                }
-            }
-            break;*/
-
-        default:
-            result = new SyntaxTree();
-            result.node = node;
-            foreach (child; node.children)
-            {
-                result.children ~= buildTree(child);
-            }
-            break;
-    }
-    return result;
-}
-
 private void buildTables(SyntaxTree node, SymbolTableStack stack)
 {
     switch (node.node.name)
@@ -161,18 +138,20 @@ private void buildTables(SyntaxTree node, SymbolTableStack stack)
 
         case "Zero.VarStatement":
         case "Zero.ConstStatement":
-            auto name = node.children[0].children[0].node.matches[0];
-
-            if (node.node.matches[0] == "global")
+            foreach (child; node.children)
             {
-                node.symbol = stack.enterGlobal(name);
-            }
-            else
-            {
-                node.symbol = stack.enterLocal(name);
-            }
+                auto name = child.matches[0];
 
-            node.symbol.positions ~= position(node.node);
+                if (node.matches[0] == "global")
+                {
+                    child.symbol = stack.enterGlobal(name);
+                }
+                else
+                {
+                    child.symbol = stack.enterLocal(name);
+                }
+                child.symbol.positions ~= position(child.node);
+            }
             break;
 
         case "Zero.Symbol":

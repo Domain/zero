@@ -37,10 +37,10 @@ void parse(string code)
     writeln();
     auto syntaxTree = buildSyntaxTree(pt.dup);
     writeln(syntaxTree);
-    auto simplified = simplifyParseTree(pt.dup);
-    writeln(simplified);
+    // auto simplified = simplifyParseTree(pt.dup);
+    // writeln(simplified);
     writeln();
-    writeln(generate(simplified));
+    writeln(generate(syntaxTree));
     writeln();
 }
 

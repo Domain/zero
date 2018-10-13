@@ -146,13 +146,12 @@ void build(string moduleName = "zero.parser", string path = null)
 		LineComment <~ :'//' (!endOfLine .)* :endOfLine
 		`;
 
-    import std.string : strip, replace;
-    import std.path : dirSeparator;
+	import std.string : strip, replace;
+	import std.path : dirSeparator;
 
-    auto name = moduleName.strip;
-    if (path is null)
-        path = name.replace(".", dirSeparator);
+	auto name = moduleName.strip;
+	if (path is null)
+		path = name.replace(".", dirSeparator);
 
 	asModule!()(name, path, zeroGrammar);
 }
-

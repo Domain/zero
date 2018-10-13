@@ -31,23 +31,22 @@ void build(string moduleName = "zero.parser", string path = null)
         ForExpression < Initialize Expression :';' Increment?
 		Initialize < Statement
 		Increment < Expression
-		ForeachStatement < :'foreach' :'(' :'var' VarIdentifier :';' ForeachRange :')' :'do' Statement
+		ForeachStatement < :'foreach' :'(' :'var' Symbol :';' ForeachRange :')' :'do' Statement
         ForeachRange < Expression ('..' Expression)?
 		ReturnStatement < 'return' Expression? :';'
 		BreakStatement < 'break' :';'
 		ContinueStatement < 'continue' :';'
 		ExpressionStatement < Expression :';'
 		VarStatement < 'global'? :'var' VarDeclarationList :';'
-		VarDeclarationList < VarExpression (:',' VarExpression)*
-		VarExpression < VarDeclaration (:':=' Expression)?
-		VarDeclaration <- identifier
+		VarDeclarationList < VarDeclaration (:',' VarDeclaration)*
+		VarDeclaration < Symbol (:':=' Expression)?
 		ConstStatement < 'global'? :'const' ConstDeclarationList :';'
 		ConstDeclarationList < ConstDeclaration (:',' ConstDeclaration)*
-		ConstDeclaration < Identifier :':=' Expression
-		FunctionStatement < :'function' identifier Parameters FunctionAttributes Statement
+		ConstDeclaration < Symbol :'=' Expression
+		FunctionStatement < :'function' Symbol Parameters FunctionAttributes Statement
 		Parameters < '(' ParameterList? ')'
 		ParameterList < Parameter (:',' Parameter)*
-		Parameter < 'var' VarExpression
+		Parameter < 'var' VarDeclaration
 		FunctionAttributes < FunctionAttribute*
         FunctionAttribute <- 'override'
 		### Expression ###
@@ -67,7 +66,7 @@ void build(string moduleName = "zero.parser", string path = null)
 		SignExpr < Sign UnaryExpr
 		PowExpr < PostExpr ('^' UnaryExpr)?
 		PostExpr < TableIndex / ArrayIndex / CallExpr / MemberCall / PrimaryExpr
-		MemberCall <- PostExpr :'.' Identifier
+		MemberCall <- PostExpr :'.' Symbol
 		TableIndex < PostExpr :'{' Expression :'}'
 		ArrayIndex < PostExpr :'[' Expression :']'
 		CallExpr < PostExpr Argument
@@ -76,11 +75,10 @@ void build(string moduleName = "zero.parser", string path = null)
 		PrimaryExpr < :'(' Expression :')' / 
 			ArrayExpr / 
 			TableExpr / 
-			ConstExpr /
 			RealLiteral / 
 			IntegerLiteral / 
 			String / 
-			VarIdentifier / 
+			Symbol / 
 			This / 
 			Null / 
 			True / 
@@ -91,8 +89,7 @@ void build(string moduleName = "zero.parser", string path = null)
 		TableExpr < '{' TableElementList? :','? '}'
 		TableElementList < TableElement (:',' TableElement)*
 		TableElement < TernaryExpr (:':=' Expression)?
-		ConstExpr < Identifier
-		VarIdentifier <- Identifier
+		ConstExpr < Symbol
 		
 		IntegerLiteral <- Binary / Hexadecimal / Octal / Decimal
 		Decimal <~ :('0'[dD])? Integer / Sign? Integer
@@ -115,9 +112,9 @@ void build(string moduleName = "zero.parser", string path = null)
 		False < 'false'
 		Lambda < CapturedList Parameters BlockStatement
 		CapturedList < '<' CapturedVar? '>'
-		CapturedVar < (RenamedVar / VarIdentifier) (:',' CapturedVar)*
-		RenamedVar < :'var' VarIdentifier :':=' Expression
-		Identifier <~ !Keyword [a-zA-Z_$][a-zA-Z0-9_$]*
+		CapturedVar < (RenamedVar / Symbol) (:',' CapturedVar)*
+		RenamedVar < :'var' Symbol :':=' Expression
+		Symbol <~ !Keyword [a-zA-Z_$][a-zA-Z0-9_$]*
 		Keyword < (
                 'if' / 
                 'else' / 

@@ -35,6 +35,8 @@ void parse(string code)
 	    writeln(pt.matches);
     writeln(pt);
     writeln();
+    auto syntaxTree = buildSyntaxTree(pt.dup);
+    writeln(syntaxTree);
     auto simplified = simplifyParseTree(pt.dup);
     writeln(simplified);
     writeln();
@@ -65,7 +67,9 @@ int main(string[] args)
 
     if (buildParser)
     {
-        build();
+        if (output == "a.out")
+            output = null;
+        build("zero.parser", output);
         return 0;
     }
 

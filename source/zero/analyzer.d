@@ -1,5 +1,7 @@
 module zero.analyzer;
 
+import std.stdio;
+import std.conv : to;
 import pegged.peg : ParseTree, position;
 import zero.symboltable;
 
@@ -8,6 +10,24 @@ class SyntaxTree
     ParseTree node;
     Symbol symbol;
     SyntaxTree[] children;
+
+    override string toString() const
+    {
+        return toString("");
+    }
+
+	string toString(string tabs = "") const
+    {
+        string result = node.name;
+        string childrenString;
+        foreach(i,child; children)
+        {
+            childrenString ~= tabs ~ " +-" ~ child.toString(tabs ~ ((i < children.length -1 ) ? " | " : "   "));
+        }
+
+        result ~= " " ~ to!string([node.begin, node.end]) ~ to!string(node.matches) ~ "\n";
+        return result ~ childrenString;
+    }
 }
 
 SyntaxTree buildSyntaxTree(ParseTree root)
@@ -140,6 +160,7 @@ private void buildTables(SyntaxTree node, SymbolTableStack stack)
             break;
 
         case "Zero.VarStatement":
+        case "Zero.ConstStatement":
             auto name = node.children[0].children[0].node.matches[0];
 
             if (node.node.matches[0] == "global")
@@ -154,7 +175,26 @@ private void buildTables(SyntaxTree node, SymbolTableStack stack)
             node.symbol.positions ~= position(node.node);
             break;
 
+        case "Zero.Symbol":
+            auto name = node.node.matches[0];
+            auto symbol = stack.lookup(name);
+
+            if (symbol is null)
+            {
+                writefln("Undefined symbol %s at line %s", name, position(node.node));
+            }
+            else
+            {
+                symbol.positions ~= position(node.node);
+            }
+
+            break;
+
         default:
+            foreach (child; node.children)
+            {
+                buildTables(child, stack);
+            }
             break;
     }
 }

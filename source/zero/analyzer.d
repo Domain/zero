@@ -39,10 +39,9 @@ class SyntaxTree
 
 SyntaxTree buildSyntaxTree(ParseTree root)
 {
-    scope (failure) writeln("Something wrong");
     auto tree = buildTree(root);
-    auto stack = new SymbolTableStack();
-    buildTables(tree, stack);
+    //auto stack = new SymbolTableStack();
+    //buildTables(tree, stack);
     return tree;
 }
 
@@ -152,7 +151,7 @@ private void buildTables(SyntaxTree node, SymbolTableStack stack)
                 }
                 child.symbol.positions ~= position(child.node);
             }
-            break;
+            break
 
         case "Zero.Symbol":
             auto name = node.node.matches[0];

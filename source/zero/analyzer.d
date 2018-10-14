@@ -32,7 +32,17 @@ class SyntaxTree
             childrenString ~= tabs ~ " +-" ~ child.toString(tabs ~ ((i < children.length -1 ) ? " | " : "   "));
         }
 
-        result ~= " " ~ to!string([node.begin, node.end]) ~ to!string(node.matches) ~ "\n";
+        result ~= " " ~ to!string([node.begin, node.end]) ~ to!string(node.matches);
+        if (symbol !is null)
+        {
+            result ~= "(" ~ symbol.name ~ "[";
+            foreach (pos; symbol.positions)
+            {
+                result ~= to!string(pos.line) ~ ",";
+            }
+            result ~= "])";
+        }
+        result ~= "\n";
         return result ~ childrenString;
     }
 }
@@ -40,8 +50,8 @@ class SyntaxTree
 SyntaxTree buildSyntaxTree(ParseTree root)
 {
     auto tree = buildTree(root);
-    //auto stack = new SymbolTableStack();
-    //buildTables(tree, stack);
+    auto stack = new SymbolTableStack();
+    buildTables(tree, stack);
     return tree;
 }
 
@@ -85,6 +95,7 @@ SyntaxTree buildTree(ParseTree p)
         case "Zero.ExpressionStatement":
         case "Zero.ConstExpr":
         case "Zero.TableElement":
+        case "Zero.BlockStatement":
             return simplifyChildren(p);
 
         case "Zero.Parameters":
@@ -139,6 +150,28 @@ private void buildTables(SyntaxTree node, SymbolTableStack stack)
                 }
                 child.symbol.positions ~= position(child.node);
             }
+            break;
+
+        case "Zero.FunctionStatement":
+            auto fname = node.children[0].node.matches[0];
+            node.children[0].symbol = stack.enterLocal(fname);
+            node.children[0].symbol.positions ~= position(node.children[0].node);
+
+            stack.push();
+
+            foreach (child; node.children[1].children)
+            {
+                auto arg = child;
+                if (child.name == "Zero.VarDeclaration")
+                {
+                    arg = child.children[0];
+                }
+                stack.enterLocal(arg.matches[0]);
+            }
+
+            buildTables(node.children[2], stack);
+
+            stack.pop();
             break;
 
         case "Zero.Symbol":

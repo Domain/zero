@@ -24,7 +24,8 @@ void build(string moduleName = "zero.parser", string path = null)
 			ContinueStatement / 
 			ExpressionStatement 
 		BlockStatement < '{' Statement* '}'
-		IfStatement < :'if' Expression :'then' Statement ( :'else' Statement )?
+		IfStatement < :'if' Condition :'then' Statement ( :'else' Statement )?
+		Condition < Expression / :'(' VarStatement Expression :')'
 		WhileStatement < :'while' Expression :'do' Statement
 		RepeatStatement < :'repeat' Statement :'until' Expression :';'
 		ForStatement < :'for' :'(' ForExpression :')' :'do' Statement
@@ -48,7 +49,7 @@ void build(string moduleName = "zero.parser", string path = null)
 		ParameterList < Parameter (:',' Parameter)*
 		Parameter < 'var' VarDeclaration
 		FunctionAttributes < FunctionAttribute*
-        FunctionAttribute <- 'override'
+        FunctionAttribute <- 'override' / 'server' / 'client'
 		### Expression ###
 		Expression < AssignExpr 
 		AssignExpr < TernaryExpr ( :':=' TernaryExpr )? 

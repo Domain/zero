@@ -111,7 +111,7 @@ This module was automatically generated from the following grammar:
 		CapturedList < '<' CapturedVar? '>'
 		CapturedVar < (RenamedVar / Symbol) (:',' CapturedVar)*
 		RenamedVar < :'var' Symbol :':=' Expression
-		Symbol <~ !Keyword [a-zA-Z_$][a-zA-Z0-9_$]*
+		Symbol <~ !Keyword SymbolFirst SymbolChar*
 		Keyword < (
                 'if' / 
                 'else' / 
@@ -137,6 +137,8 @@ This module was automatically generated from the following grammar:
                 'false' / 
                 'in' /
                 'do') ![a-zA-Z0-9_]
+		SymbolFirst < [a-zA-Z_$\u00A8\u00AA\u00AD\u00AF\u00B2-\u00B5\u00B7-\u00BA\u00BC-\u00BE\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF\u0100-\u02FF\u0370-\u167F\u1681-\u180D\u180F-\u1DBF\u1E00-\u1FFF\u200B-\u200D\u202A-\u202E\u203F-\u2040\u2054\u2060-\u206F\u2070-\u20CF\u2100-\u218F\u2460-\u24FF\u2776-\u2793\u2C00-\u2DFF\u2E80-\u2FFF\u3004-\u3007\u3021-\u302F\u3031-\u303F\u3040-\uD7FF\uF900-\uFD3D\uFD40-\uFDCF\uFDF0-\uFE1F\uFE30-\uFE44\uFE47-\uFFFD\U00010000-\U0001FFFD\U00020000-\U0002FFFD\U00030000-\U0003FFFD\U00040000-\U0004FFFD\U00050000-\U0005FFFD\U00060000-\U0006FFFD\U00070000-\U0007FFFD\U00080000-\U0008FFFD\U00090000-\U0009FFFD\U000A0000-\U000AFFFD\U000B0000-\U000BFFFD\U000C0000-\U000CFFFD\U000D0000-\U000DFFFD\U000E0000-\U000EFFFD]
+		SymbolChar < SymbolFirst / [0-9\u0300-\u036F\u1DC0-\u1DFF\u20D0-\u20FF\uFE20-\uFE2F]
 		Spacing <: (blank / Comment)*
 		Comment <: BlockComment / LineComment
 		BlockComment <~ :'/*' (!'*/' .)* :'*/'
@@ -151,24 +153,23 @@ import std.algorithm: startsWith;
 import std.functional: toDelegate;
 
 /** Left-recursive cycles:
-OrExpr
 PostExpr <- TableIndex
 PostExpr <- ArrayIndex
-CallExpr <- PostExpr
+PostExpr <- CallExpr
 PostExpr <- MemberCall
-AndExpr
-AddExpr
 MulExpr
+OrExpr
+AddExpr
+AndExpr
 */
 
 /** Rules that stop left-recursive cycles, followed by rules for which
  *  memoization is blocked during recursion:
-OrExpr: OrExpr, PostExpr, TableIndex, ArrayIndex, CallExpr, MemberCall, AndExpr, AddExpr, MulExpr
-PostExpr: OrExpr, PostExpr, TableIndex, ArrayIndex, CallExpr, MemberCall, AndExpr, AddExpr, MulExpr
-CallExpr: OrExpr, PostExpr, TableIndex, ArrayIndex, CallExpr, MemberCall, AndExpr, AddExpr, MulExpr
-AndExpr: OrExpr, PostExpr, TableIndex, ArrayIndex, CallExpr, MemberCall, AndExpr, AddExpr, MulExpr
-AddExpr: OrExpr, PostExpr, TableIndex, ArrayIndex, CallExpr, MemberCall, AndExpr, AddExpr, MulExpr
-MulExpr: OrExpr, PostExpr, TableIndex, ArrayIndex, CallExpr, MemberCall, AndExpr, AddExpr, MulExpr
+PostExpr: PostExpr, TableIndex, ArrayIndex, CallExpr, MemberCall, MulExpr, OrExpr, AddExpr, AndExpr
+MulExpr: PostExpr, TableIndex, ArrayIndex, CallExpr, MemberCall, MulExpr, OrExpr, AddExpr, AndExpr
+OrExpr: PostExpr, TableIndex, ArrayIndex, CallExpr, MemberCall, MulExpr, OrExpr, AddExpr, AndExpr
+AddExpr: PostExpr, TableIndex, ArrayIndex, CallExpr, MemberCall, MulExpr, OrExpr, AddExpr, AndExpr
+AndExpr: PostExpr, TableIndex, ArrayIndex, CallExpr, MemberCall, MulExpr, OrExpr, AddExpr, AndExpr
 */
 
 struct GenericZero(TParseTree)
@@ -272,6 +273,8 @@ struct GenericZero(TParseTree)
         rules["RenamedVar"] = toDelegate(&RenamedVar);
         rules["Symbol"] = toDelegate(&Symbol);
         rules["Keyword"] = toDelegate(&Keyword);
+        rules["SymbolFirst"] = toDelegate(&SymbolFirst);
+        rules["SymbolChar"] = toDelegate(&SymbolChar);
         rules["Spacing"] = toDelegate(&Spacing);
     }
 
@@ -2190,33 +2193,19 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            assert(false, "CallExpr is left-recursive, which is not supported at compile-time. Consider using asModule().");
+            return         pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, PostExpr, Spacing), pegged.peg.wrapAround!(Spacing, Argument, Spacing)), "Zero.CallExpr")(p);
         }
         else
         {
-            static TParseTree[size_t /*position*/] seed;
-            if (auto s = p.end in seed)
-                return *s;
-            if (!blockMemoAtPos.canFind(p.end))
-                if (auto m = tuple(`CallExpr`, p.end) in memo)
-                    return *m;
-            auto current = fail(p);
-            seed[p.end] = current;
-            blockMemoAtPos ~= p.end;
-            while (true)
+            if (blockMemoAtPos.canFind(p.end))
+                return hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, PostExpr, Spacing), pegged.peg.wrapAround!(Spacing, Argument, Spacing)), "Zero.CallExpr"), "CallExpr")(p);
+            if (auto m = tuple(`CallExpr`, p.end) in memo)
+                return *m;
+            else
             {
-                auto result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, PostExpr, Spacing), pegged.peg.wrapAround!(Spacing, Argument, Spacing)), "Zero.CallExpr"), "CallExpr")(p);
-                if (result.end > current.end)
-                {
-                    current = result;
-                    seed[p.end] = current;
-                } else {
-                    seed.remove(p.end);
-                    assert(blockMemoAtPos.canFind(p.end));
-                    blockMemoAtPos = blockMemoAtPos.remove(countUntil(blockMemoAtPos, p.end));
-                    memo[tuple(`CallExpr`, p.end)] = current;
-                    return current;
-                }
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.and!(pegged.peg.wrapAround!(Spacing, PostExpr, Spacing), pegged.peg.wrapAround!(Spacing, Argument, Spacing)), "Zero.CallExpr"), "CallExpr")(p);
+                memo[tuple(`CallExpr`, p.end)] = result;
+                return result;
             }
         }
     }
@@ -3394,7 +3383,7 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(pegged.peg.negLookahead!(Keyword), pegged.peg.or!(pegged.peg.charRange!('a', 'z'), pegged.peg.charRange!('A', 'Z'), pegged.peg.literal!("_"), pegged.peg.literal!("$")), pegged.peg.zeroOrMore!(pegged.peg.or!(pegged.peg.charRange!('a', 'z'), pegged.peg.charRange!('A', 'Z'), pegged.peg.charRange!('0', '9'), pegged.peg.literal!("_"), pegged.peg.literal!("$"))))), "Zero.Symbol")(p);
+            return         pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(pegged.peg.negLookahead!(Keyword), SymbolFirst, pegged.peg.zeroOrMore!(SymbolChar))), "Zero.Symbol")(p);
         }
         else
         {
@@ -3402,7 +3391,7 @@ struct GenericZero(TParseTree)
                 return *m;
             else
             {
-                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(pegged.peg.negLookahead!(Keyword), pegged.peg.or!(pegged.peg.charRange!('a', 'z'), pegged.peg.charRange!('A', 'Z'), pegged.peg.literal!("_"), pegged.peg.literal!("$")), pegged.peg.zeroOrMore!(pegged.peg.or!(pegged.peg.charRange!('a', 'z'), pegged.peg.charRange!('A', 'Z'), pegged.peg.charRange!('0', '9'), pegged.peg.literal!("_"), pegged.peg.literal!("$"))))), "Zero.Symbol"), "Symbol")(p);
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(pegged.peg.negLookahead!(Keyword), SymbolFirst, pegged.peg.zeroOrMore!(SymbolChar))), "Zero.Symbol"), "Symbol")(p);
                 memo[tuple(`Symbol`, p.end)] = result;
                 return result;
             }
@@ -3413,12 +3402,12 @@ struct GenericZero(TParseTree)
     {
         if(__ctfe)
         {
-            return         pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(pegged.peg.negLookahead!(Keyword), pegged.peg.or!(pegged.peg.charRange!('a', 'z'), pegged.peg.charRange!('A', 'Z'), pegged.peg.literal!("_"), pegged.peg.literal!("$")), pegged.peg.zeroOrMore!(pegged.peg.or!(pegged.peg.charRange!('a', 'z'), pegged.peg.charRange!('A', 'Z'), pegged.peg.charRange!('0', '9'), pegged.peg.literal!("_"), pegged.peg.literal!("$"))))), "Zero.Symbol")(TParseTree("", false,[], s));
+            return         pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(pegged.peg.negLookahead!(Keyword), SymbolFirst, pegged.peg.zeroOrMore!(SymbolChar))), "Zero.Symbol")(TParseTree("", false,[], s));
         }
         else
         {
             forgetMemo();
-            return hooked!(pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(pegged.peg.negLookahead!(Keyword), pegged.peg.or!(pegged.peg.charRange!('a', 'z'), pegged.peg.charRange!('A', 'Z'), pegged.peg.literal!("_"), pegged.peg.literal!("$")), pegged.peg.zeroOrMore!(pegged.peg.or!(pegged.peg.charRange!('a', 'z'), pegged.peg.charRange!('A', 'Z'), pegged.peg.charRange!('0', '9'), pegged.peg.literal!("_"), pegged.peg.literal!("$"))))), "Zero.Symbol"), "Symbol")(TParseTree("", false,[], s));
+            return hooked!(pegged.peg.defined!(pegged.peg.fuse!(pegged.peg.and!(pegged.peg.negLookahead!(Keyword), SymbolFirst, pegged.peg.zeroOrMore!(SymbolChar))), "Zero.Symbol"), "Symbol")(TParseTree("", false,[], s));
         }
     }
     static string Symbol(GetName g)
@@ -3460,6 +3449,78 @@ struct GenericZero(TParseTree)
     static string Keyword(GetName g)
     {
         return "Zero.Keyword";
+    }
+
+    static TParseTree SymbolFirst(TParseTree p)
+    {
+        if(__ctfe)
+        {
+            return         pegged.peg.defined!(pegged.peg.wrapAround!(Spacing, pegged.peg.or!(pegged.peg.charRange!('a', 'z'), pegged.peg.charRange!('A', 'Z'), pegged.peg.literal!("_"), pegged.peg.literal!("$"), pegged.peg.literal!("\u00A8"), pegged.peg.literal!("\u00AA"), pegged.peg.literal!("\u00AD"), pegged.peg.literal!("\u00AF"), pegged.peg.charRange!('\u00B2', '\u00B5'), pegged.peg.charRange!('\u00B7', '\u00BA'), pegged.peg.charRange!('\u00BC', '\u00BE'), pegged.peg.charRange!('\u00C0', '\u00D6'), pegged.peg.charRange!('\u00D8', '\u00F6'), pegged.peg.charRange!('\u00F8', '\u00FF'), pegged.peg.charRange!('\u0100', '\u02FF'), pegged.peg.charRange!('\u0370', '\u167F'), pegged.peg.charRange!('\u1681', '\u180D'), pegged.peg.charRange!('\u180F', '\u1DBF'), pegged.peg.charRange!('\u1E00', '\u1FFF'), pegged.peg.charRange!('\u200B', '\u200D'), pegged.peg.charRange!('\u202A', '\u202E'), pegged.peg.charRange!('\u203F', '\u2040'), pegged.peg.literal!("\u2054"), pegged.peg.charRange!('\u2060', '\u206F'), pegged.peg.charRange!('\u2070', '\u20CF'), pegged.peg.charRange!('\u2100', '\u218F'), pegged.peg.charRange!('\u2460', '\u24FF'), pegged.peg.charRange!('\u2776', '\u2793'), pegged.peg.charRange!('\u2C00', '\u2DFF'), pegged.peg.charRange!('\u2E80', '\u2FFF'), pegged.peg.charRange!('\u3004', '\u3007'), pegged.peg.charRange!('\u3021', '\u302F'), pegged.peg.charRange!('\u3031', '\u303F'), pegged.peg.charRange!('\u3040', '\uD7FF'), pegged.peg.charRange!('\uF900', '\uFD3D'), pegged.peg.charRange!('\uFD40', '\uFDCF'), pegged.peg.charRange!('\uFDF0', '\uFE1F'), pegged.peg.charRange!('\uFE30', '\uFE44'), pegged.peg.charRange!('\uFE47', '\uFFFD'), pegged.peg.charRange!('\U00010000', '\U0001FFFD'), pegged.peg.charRange!('\U00020000', '\U0002FFFD'), pegged.peg.charRange!('\U00030000', '\U0003FFFD'), pegged.peg.charRange!('\U00040000', '\U0004FFFD'), pegged.peg.charRange!('\U00050000', '\U0005FFFD'), pegged.peg.charRange!('\U00060000', '\U0006FFFD'), pegged.peg.charRange!('\U00070000', '\U0007FFFD'), pegged.peg.charRange!('\U00080000', '\U0008FFFD'), pegged.peg.charRange!('\U00090000', '\U0009FFFD'), pegged.peg.charRange!('\U000A0000', '\U000AFFFD'), pegged.peg.charRange!('\U000B0000', '\U000BFFFD'), pegged.peg.charRange!('\U000C0000', '\U000CFFFD'), pegged.peg.charRange!('\U000D0000', '\U000DFFFD'), pegged.peg.charRange!('\U000E0000', '\U000EFFFD')), Spacing), "Zero.SymbolFirst")(p);
+        }
+        else
+        {
+            if (auto m = tuple(`SymbolFirst`, p.end) in memo)
+                return *m;
+            else
+            {
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.wrapAround!(Spacing, pegged.peg.or!(pegged.peg.charRange!('a', 'z'), pegged.peg.charRange!('A', 'Z'), pegged.peg.literal!("_"), pegged.peg.literal!("$"), pegged.peg.literal!("\u00A8"), pegged.peg.literal!("\u00AA"), pegged.peg.literal!("\u00AD"), pegged.peg.literal!("\u00AF"), pegged.peg.charRange!('\u00B2', '\u00B5'), pegged.peg.charRange!('\u00B7', '\u00BA'), pegged.peg.charRange!('\u00BC', '\u00BE'), pegged.peg.charRange!('\u00C0', '\u00D6'), pegged.peg.charRange!('\u00D8', '\u00F6'), pegged.peg.charRange!('\u00F8', '\u00FF'), pegged.peg.charRange!('\u0100', '\u02FF'), pegged.peg.charRange!('\u0370', '\u167F'), pegged.peg.charRange!('\u1681', '\u180D'), pegged.peg.charRange!('\u180F', '\u1DBF'), pegged.peg.charRange!('\u1E00', '\u1FFF'), pegged.peg.charRange!('\u200B', '\u200D'), pegged.peg.charRange!('\u202A', '\u202E'), pegged.peg.charRange!('\u203F', '\u2040'), pegged.peg.literal!("\u2054"), pegged.peg.charRange!('\u2060', '\u206F'), pegged.peg.charRange!('\u2070', '\u20CF'), pegged.peg.charRange!('\u2100', '\u218F'), pegged.peg.charRange!('\u2460', '\u24FF'), pegged.peg.charRange!('\u2776', '\u2793'), pegged.peg.charRange!('\u2C00', '\u2DFF'), pegged.peg.charRange!('\u2E80', '\u2FFF'), pegged.peg.charRange!('\u3004', '\u3007'), pegged.peg.charRange!('\u3021', '\u302F'), pegged.peg.charRange!('\u3031', '\u303F'), pegged.peg.charRange!('\u3040', '\uD7FF'), pegged.peg.charRange!('\uF900', '\uFD3D'), pegged.peg.charRange!('\uFD40', '\uFDCF'), pegged.peg.charRange!('\uFDF0', '\uFE1F'), pegged.peg.charRange!('\uFE30', '\uFE44'), pegged.peg.charRange!('\uFE47', '\uFFFD'), pegged.peg.charRange!('\U00010000', '\U0001FFFD'), pegged.peg.charRange!('\U00020000', '\U0002FFFD'), pegged.peg.charRange!('\U00030000', '\U0003FFFD'), pegged.peg.charRange!('\U00040000', '\U0004FFFD'), pegged.peg.charRange!('\U00050000', '\U0005FFFD'), pegged.peg.charRange!('\U00060000', '\U0006FFFD'), pegged.peg.charRange!('\U00070000', '\U0007FFFD'), pegged.peg.charRange!('\U00080000', '\U0008FFFD'), pegged.peg.charRange!('\U00090000', '\U0009FFFD'), pegged.peg.charRange!('\U000A0000', '\U000AFFFD'), pegged.peg.charRange!('\U000B0000', '\U000BFFFD'), pegged.peg.charRange!('\U000C0000', '\U000CFFFD'), pegged.peg.charRange!('\U000D0000', '\U000DFFFD'), pegged.peg.charRange!('\U000E0000', '\U000EFFFD')), Spacing), "Zero.SymbolFirst"), "SymbolFirst")(p);
+                memo[tuple(`SymbolFirst`, p.end)] = result;
+                return result;
+            }
+        }
+    }
+
+    static TParseTree SymbolFirst(string s)
+    {
+        if(__ctfe)
+        {
+            return         pegged.peg.defined!(pegged.peg.wrapAround!(Spacing, pegged.peg.or!(pegged.peg.charRange!('a', 'z'), pegged.peg.charRange!('A', 'Z'), pegged.peg.literal!("_"), pegged.peg.literal!("$"), pegged.peg.literal!("\u00A8"), pegged.peg.literal!("\u00AA"), pegged.peg.literal!("\u00AD"), pegged.peg.literal!("\u00AF"), pegged.peg.charRange!('\u00B2', '\u00B5'), pegged.peg.charRange!('\u00B7', '\u00BA'), pegged.peg.charRange!('\u00BC', '\u00BE'), pegged.peg.charRange!('\u00C0', '\u00D6'), pegged.peg.charRange!('\u00D8', '\u00F6'), pegged.peg.charRange!('\u00F8', '\u00FF'), pegged.peg.charRange!('\u0100', '\u02FF'), pegged.peg.charRange!('\u0370', '\u167F'), pegged.peg.charRange!('\u1681', '\u180D'), pegged.peg.charRange!('\u180F', '\u1DBF'), pegged.peg.charRange!('\u1E00', '\u1FFF'), pegged.peg.charRange!('\u200B', '\u200D'), pegged.peg.charRange!('\u202A', '\u202E'), pegged.peg.charRange!('\u203F', '\u2040'), pegged.peg.literal!("\u2054"), pegged.peg.charRange!('\u2060', '\u206F'), pegged.peg.charRange!('\u2070', '\u20CF'), pegged.peg.charRange!('\u2100', '\u218F'), pegged.peg.charRange!('\u2460', '\u24FF'), pegged.peg.charRange!('\u2776', '\u2793'), pegged.peg.charRange!('\u2C00', '\u2DFF'), pegged.peg.charRange!('\u2E80', '\u2FFF'), pegged.peg.charRange!('\u3004', '\u3007'), pegged.peg.charRange!('\u3021', '\u302F'), pegged.peg.charRange!('\u3031', '\u303F'), pegged.peg.charRange!('\u3040', '\uD7FF'), pegged.peg.charRange!('\uF900', '\uFD3D'), pegged.peg.charRange!('\uFD40', '\uFDCF'), pegged.peg.charRange!('\uFDF0', '\uFE1F'), pegged.peg.charRange!('\uFE30', '\uFE44'), pegged.peg.charRange!('\uFE47', '\uFFFD'), pegged.peg.charRange!('\U00010000', '\U0001FFFD'), pegged.peg.charRange!('\U00020000', '\U0002FFFD'), pegged.peg.charRange!('\U00030000', '\U0003FFFD'), pegged.peg.charRange!('\U00040000', '\U0004FFFD'), pegged.peg.charRange!('\U00050000', '\U0005FFFD'), pegged.peg.charRange!('\U00060000', '\U0006FFFD'), pegged.peg.charRange!('\U00070000', '\U0007FFFD'), pegged.peg.charRange!('\U00080000', '\U0008FFFD'), pegged.peg.charRange!('\U00090000', '\U0009FFFD'), pegged.peg.charRange!('\U000A0000', '\U000AFFFD'), pegged.peg.charRange!('\U000B0000', '\U000BFFFD'), pegged.peg.charRange!('\U000C0000', '\U000CFFFD'), pegged.peg.charRange!('\U000D0000', '\U000DFFFD'), pegged.peg.charRange!('\U000E0000', '\U000EFFFD')), Spacing), "Zero.SymbolFirst")(TParseTree("", false,[], s));
+        }
+        else
+        {
+            forgetMemo();
+            return hooked!(pegged.peg.defined!(pegged.peg.wrapAround!(Spacing, pegged.peg.or!(pegged.peg.charRange!('a', 'z'), pegged.peg.charRange!('A', 'Z'), pegged.peg.literal!("_"), pegged.peg.literal!("$"), pegged.peg.literal!("\u00A8"), pegged.peg.literal!("\u00AA"), pegged.peg.literal!("\u00AD"), pegged.peg.literal!("\u00AF"), pegged.peg.charRange!('\u00B2', '\u00B5'), pegged.peg.charRange!('\u00B7', '\u00BA'), pegged.peg.charRange!('\u00BC', '\u00BE'), pegged.peg.charRange!('\u00C0', '\u00D6'), pegged.peg.charRange!('\u00D8', '\u00F6'), pegged.peg.charRange!('\u00F8', '\u00FF'), pegged.peg.charRange!('\u0100', '\u02FF'), pegged.peg.charRange!('\u0370', '\u167F'), pegged.peg.charRange!('\u1681', '\u180D'), pegged.peg.charRange!('\u180F', '\u1DBF'), pegged.peg.charRange!('\u1E00', '\u1FFF'), pegged.peg.charRange!('\u200B', '\u200D'), pegged.peg.charRange!('\u202A', '\u202E'), pegged.peg.charRange!('\u203F', '\u2040'), pegged.peg.literal!("\u2054"), pegged.peg.charRange!('\u2060', '\u206F'), pegged.peg.charRange!('\u2070', '\u20CF'), pegged.peg.charRange!('\u2100', '\u218F'), pegged.peg.charRange!('\u2460', '\u24FF'), pegged.peg.charRange!('\u2776', '\u2793'), pegged.peg.charRange!('\u2C00', '\u2DFF'), pegged.peg.charRange!('\u2E80', '\u2FFF'), pegged.peg.charRange!('\u3004', '\u3007'), pegged.peg.charRange!('\u3021', '\u302F'), pegged.peg.charRange!('\u3031', '\u303F'), pegged.peg.charRange!('\u3040', '\uD7FF'), pegged.peg.charRange!('\uF900', '\uFD3D'), pegged.peg.charRange!('\uFD40', '\uFDCF'), pegged.peg.charRange!('\uFDF0', '\uFE1F'), pegged.peg.charRange!('\uFE30', '\uFE44'), pegged.peg.charRange!('\uFE47', '\uFFFD'), pegged.peg.charRange!('\U00010000', '\U0001FFFD'), pegged.peg.charRange!('\U00020000', '\U0002FFFD'), pegged.peg.charRange!('\U00030000', '\U0003FFFD'), pegged.peg.charRange!('\U00040000', '\U0004FFFD'), pegged.peg.charRange!('\U00050000', '\U0005FFFD'), pegged.peg.charRange!('\U00060000', '\U0006FFFD'), pegged.peg.charRange!('\U00070000', '\U0007FFFD'), pegged.peg.charRange!('\U00080000', '\U0008FFFD'), pegged.peg.charRange!('\U00090000', '\U0009FFFD'), pegged.peg.charRange!('\U000A0000', '\U000AFFFD'), pegged.peg.charRange!('\U000B0000', '\U000BFFFD'), pegged.peg.charRange!('\U000C0000', '\U000CFFFD'), pegged.peg.charRange!('\U000D0000', '\U000DFFFD'), pegged.peg.charRange!('\U000E0000', '\U000EFFFD')), Spacing), "Zero.SymbolFirst"), "SymbolFirst")(TParseTree("", false,[], s));
+        }
+    }
+    static string SymbolFirst(GetName g)
+    {
+        return "Zero.SymbolFirst";
+    }
+
+    static TParseTree SymbolChar(TParseTree p)
+    {
+        if(__ctfe)
+        {
+            return         pegged.peg.defined!(pegged.peg.or!(pegged.peg.wrapAround!(Spacing, SymbolFirst, Spacing), pegged.peg.wrapAround!(Spacing, pegged.peg.or!(pegged.peg.charRange!('0', '9'), pegged.peg.charRange!('\u0300', '\u036F'), pegged.peg.charRange!('\u1DC0', '\u1DFF'), pegged.peg.charRange!('\u20D0', '\u20FF'), pegged.peg.charRange!('\uFE20', '\uFE2F')), Spacing)), "Zero.SymbolChar")(p);
+        }
+        else
+        {
+            if (auto m = tuple(`SymbolChar`, p.end) in memo)
+                return *m;
+            else
+            {
+                TParseTree result = hooked!(pegged.peg.defined!(pegged.peg.or!(pegged.peg.wrapAround!(Spacing, SymbolFirst, Spacing), pegged.peg.wrapAround!(Spacing, pegged.peg.or!(pegged.peg.charRange!('0', '9'), pegged.peg.charRange!('\u0300', '\u036F'), pegged.peg.charRange!('\u1DC0', '\u1DFF'), pegged.peg.charRange!('\u20D0', '\u20FF'), pegged.peg.charRange!('\uFE20', '\uFE2F')), Spacing)), "Zero.SymbolChar"), "SymbolChar")(p);
+                memo[tuple(`SymbolChar`, p.end)] = result;
+                return result;
+            }
+        }
+    }
+
+    static TParseTree SymbolChar(string s)
+    {
+        if(__ctfe)
+        {
+            return         pegged.peg.defined!(pegged.peg.or!(pegged.peg.wrapAround!(Spacing, SymbolFirst, Spacing), pegged.peg.wrapAround!(Spacing, pegged.peg.or!(pegged.peg.charRange!('0', '9'), pegged.peg.charRange!('\u0300', '\u036F'), pegged.peg.charRange!('\u1DC0', '\u1DFF'), pegged.peg.charRange!('\u20D0', '\u20FF'), pegged.peg.charRange!('\uFE20', '\uFE2F')), Spacing)), "Zero.SymbolChar")(TParseTree("", false,[], s));
+        }
+        else
+        {
+            forgetMemo();
+            return hooked!(pegged.peg.defined!(pegged.peg.or!(pegged.peg.wrapAround!(Spacing, SymbolFirst, Spacing), pegged.peg.wrapAround!(Spacing, pegged.peg.or!(pegged.peg.charRange!('0', '9'), pegged.peg.charRange!('\u0300', '\u036F'), pegged.peg.charRange!('\u1DC0', '\u1DFF'), pegged.peg.charRange!('\u20D0', '\u20FF'), pegged.peg.charRange!('\uFE20', '\uFE2F')), Spacing)), "Zero.SymbolChar"), "SymbolChar")(TParseTree("", false,[], s));
+        }
+    }
+    static string SymbolChar(GetName g)
+    {
+        return "Zero.SymbolChar";
     }
 
     static TParseTree Spacing(TParseTree p)

@@ -55,32 +55,20 @@ SyntaxTree simplifyChildren(ParseTree p)
 
 SyntaxTree simplifyAll(ParseTree p)
 {
-    auto node = simplifyChildren(p);
-
-    if (node.children.length != 1)
-        return node;
+    // auto node = simplifyChildren(p);
+    if (p.children.length != 1)
+        return simplifyChildren(p);
     else // linear tree
         return buildTree(p.children[0]);
 }
 
 SyntaxTree discardFirstChild(Char)(ParseTree p, in Char[] name)
 {
-    SyntaxTree node = new SyntaxTree(p);
-    if (p.children.length == 1 && p.children[0].name == name)
+    SyntaxTree node = simplifyChildren(p);
+    
+    if (node.children.length == 1 && node.children[0].name == name)
     {
-        foreach (child; p.children[0].children)
-        {
-            auto childNode = buildTree(child);
-            node.children ~= childNode;
-        }
-    }
-    else
-    {
-        foreach (child; p.children)
-        {
-            auto childNode = buildTree(child);
-            node.children ~= childNode;
-        }
+        node.children = node.children[0].children;
     }
     return node;
 }
@@ -100,22 +88,22 @@ SyntaxTree buildTree(ParseTree p)
             return simplifyChildren(p);
 
         case "Zero.Parameters":
-            return discardFirstChild(simplifyChildren(p), "Zero.ParameterList");
+            return discardFirstChild(p, "Zero.ParameterList");
 
         case "Zero.Argument":
-            return discardFirstChild(simplifyChildren(p), "Zero.ArgumentList");
+            return discardFirstChild(p, "Zero.ArgumentList");
 
         case "Zero.VarStatement":
-            return discardFirstChild(simplifyChildren(p), "Zero.VarDeclarationList");
+            return discardFirstChild(p, "Zero.VarDeclarationList");
 
         case "Zero.ConstStatement":
-            return discardFirstChild(simplifyChildren(p), "Zero.ConstDeclarationList");
+            return discardFirstChild(p, "Zero.ConstDeclarationList");
 
         case "Zero.ArrayExpr":
-            return discardFirstChild(simplifyChildren(p), "Zero.ArrayElement");
+            return discardFirstChild(p, "Zero.ArrayElement");
 
         case "Zero.TableExpr":
-            return discardFirstChild(simplifyChildren(p), "Zero.TableElementList");
+            return discardFirstChild(p, "Zero.TableElementList");
 
         default:
             return simplifyAll(p);
@@ -151,7 +139,7 @@ private void buildTables(SyntaxTree node, SymbolTableStack stack)
                 }
                 child.symbol.positions ~= position(child.node);
             }
-            break
+            break;
 
         case "Zero.Symbol":
             auto name = node.node.matches[0];

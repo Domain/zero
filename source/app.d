@@ -84,11 +84,24 @@ int main(string[] args)
         return 0;
     }
 
-    string line;
-	while ((line = readln()) !is null)
-	{
-        parse(line);
-	}
+    import std.array : appender;
+    auto code = appender!string();
+
+    auto done = false;
+
+    while (!done)
+    {
+        auto line = readln();
+        if (line !is null)
+        {
+            code ~= line;
+        }
+        else
+        {
+            parse(code.data);
+            code = appender!string();
+        }
+    }
 
     return 0;
 }

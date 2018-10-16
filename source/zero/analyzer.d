@@ -2,6 +2,7 @@ module zero.analyzer;
 
 import std.stdio;
 import std.conv : to;
+import std.array : appender;
 import pegged.peg : ParseTree, position;
 import zero.symboltable;
 
@@ -20,30 +21,39 @@ class SyntaxTree
 
     override string toString() const
     {
-        return toString("");
+        auto buffer = appender!string();
+        buildTree(buffer, "");
+        buffer ~= "-------------------\n";
+        buffer ~= " symbol   lines\n";
+        buffer ~= "-------------------\n";
+        buildTable(buffer);
+        return buffer.data;
     }
 
-	string toString(string tabs = "") const
+	void buildTree(Output)(Output buffer, string tabs = "") const
     {
-        string result = node.name;
-        string childrenString;
+        buffer ~= node.name;
+        buffer ~= " " ~ to!string([node.begin, node.end]) ~ to!string(node.matches) ~ "\n";
+
         foreach(i,child; children)
         {
-            childrenString ~= tabs ~ " +-" ~ child.toString(tabs ~ ((i < children.length -1 ) ? " | " : "   "));
+            buffer ~= tabs ~ " +-";
+            child.buildTree(buffer, tabs ~ ((i < children.length -1 ) ? " | " : "   "));
         }
+    }
 
-        result ~= " " ~ to!string([node.begin, node.end]) ~ to!string(node.matches);
+    void buildTable(Output)(Output buffer) const
+    {
+        import std.format : format;
         if (symbol !is null)
         {
-            result ~= "(" ~ symbol.name ~ "[";
-            foreach (pos; symbol.positions)
-            {
-                result ~= to!string(pos.line) ~ ",";
-            }
-            result ~= "])";
+            buffer ~= format(" %-8s %s\n", symbol.name,
+                    symbol.positions);
         }
-        result ~= "\n";
-        return result ~ childrenString;
+        foreach (child; children)
+        {
+            child.buildTable(buffer);
+        }
     }
 }
 

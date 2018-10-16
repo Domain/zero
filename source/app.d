@@ -92,14 +92,18 @@ int main(string[] args)
     while (!done)
     {
         auto line = readln();
-        if (line !is null)
+        if (line is null)
         {
-            code ~= line;
+            done = true;
         }
-        else
+        else if (line == "\n")
         {
             parse(code.data);
             code = appender!string();
+        }
+        else
+        {
+            code ~= line;
         }
     }
 

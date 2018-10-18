@@ -136,12 +136,12 @@ private void buildTables(SyntaxTree node, SymbolTableStack stack)
     switch (node.node.name)
     {
         case "Zero.BlockStatement":
-            stack.push();
+            stack.pushBlock();
             foreach (child; node.children)
             {
                 buildTables(child, stack);
             }
-            stack.pop();
+            stack.popBlock();
             break;
 
         case "Zero.VarStatement":
@@ -163,11 +163,11 @@ private void buildTables(SyntaxTree node, SymbolTableStack stack)
             break;
 
         case "Zero.FunctionStatement":
+            stack.pushFunction();
+
             auto fname = node.children[0].node.matches[0];
             node.children[0].symbol = stack.enterLocal(fname);
             node.children[0].symbol.positions ~= position(node.children[0].node);
-
-            stack.push();
 
             foreach (child; node.children[1].children)
             {
@@ -181,7 +181,7 @@ private void buildTables(SyntaxTree node, SymbolTableStack stack)
 
             buildTables(node.children[2], stack);
 
-            stack.pop();
+            stack.popFunction();
             break;
 
         case "Zero.Symbol":
@@ -196,6 +196,8 @@ private void buildTables(SyntaxTree node, SymbolTableStack stack)
             {
                 symbol.positions ~= position(node.node);
             }
+
+            node.symbol = symbol;
 
             break;
 

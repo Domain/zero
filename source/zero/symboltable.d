@@ -7,6 +7,7 @@ class Symbol
     string name;
     Position[] positions;
     SymbolTable table;
+    int offset;
 }
 
 class SymbolTable
@@ -46,13 +47,16 @@ class SymbolTable
 class SymbolTableStack
 {
     private SymbolTable[] tables;
+    int globalSP;
+    int sp;
+    int[] spStack;
 
     this()
     {
         push(); // global table
     }
 
-    SymbolTable push()
+    private SymbolTable push()
     {
         ++currentLevel;
         auto table = new SymbolTable(currentLevel);
@@ -60,12 +64,37 @@ class SymbolTableStack
         return table;
     }
 
-    SymbolTable pop()
+    private SymbolTable pop()
     {
         --currentLevel;
         auto table = tables[$ - 1];
         tables = tables[0 .. $ - 1];
         return table;
+    }
+
+    SymbolTable pushFunction()
+    {
+        auto table = push();
+        sp = 0;
+        return table;
+    }
+
+    SymbolTable popFunction()
+    {
+        return pop();
+    }
+
+    SymbolTable pushBlock()
+    {
+        spStack ~= sp;
+        return push();
+    }
+
+    SymbolTable popBlock()
+    {
+        sp = spStack[$-1];
+        spStack = spStack[0..$-1];
+        return pop();
     }
 
     SymbolTable localSymbolTable() @property
@@ -82,12 +111,16 @@ class SymbolTableStack
 
     Symbol enterLocal(string name)
     {
-        return localSymbolTable.enter(name);
+        auto symbol = localSymbolTable.enter(name);
+        symbol.offset = sp++;
+        return symbol;
     }
 
     Symbol enterGlobal(string name)
     {
-        return globalSymbolTable.enter(name);
+        auto symbol = globalSymbolTable.enter(name);
+        symbol.offset = globalSP++;
+        return symbol;
     }
 
     Symbol lookupLocal(string name)

@@ -28,6 +28,10 @@ string help(string program, GetoptResult result)
 
 void parse(string code)
 {
+    writefln("code: %s", code);
+    foreach (dchar c; code)
+        writef("%x ", c);
+    writeln();
     auto pt = Zero(code);
     if (!pt.successful)
 	    writeln(pt.failMsg);

@@ -4,6 +4,7 @@ import zero.grammar;
 import zero.parser;
 import zero.analyzer;
 import zero.generator;
+import deimos.linenoise;
 
 string help(string program, GetoptResult result)
 {
@@ -88,12 +89,31 @@ int main(string[] args)
         return 0;
     }
 
+    linenoiseHistoryLoad("history.txt");
+
     import std.array : appender;
     auto code = appender!string();
 
     auto done = false;
+    char* line = null;
 
-    while (!done)
+	while((line = linenoise("Z> ")) !is null) 
+    {
+        if (line[0] == '\n')
+        {
+            parse(code.data);
+            code = appender!string;
+        }
+        else
+        {
+            code ~= line;
+            linenoiseHistoryAdd(line); /* Add to the history. */
+            linenoiseHistorySave("history.txt"); /* Save the history on disk. */
+        }
+        free(line);
+    }
+
+    /*while (!done)
     {
         auto line = readln();
         if (line is null)
@@ -107,9 +127,10 @@ int main(string[] args)
         }
         else
         {
+            history ~= line;
             code ~= line;
         }
-    }
+    }*/
 
     return 0;
 }

@@ -5,7 +5,8 @@
 	],
 	"dependencies": {
 		"pegged": "~>0.4.4",
-		"msgpack-d": "~>1.0.0-beta.7"
+		"msgpack-d": "~>1.0.0-beta.7",
+        "linenoise": "~>1.1.0+1.0.0"
 	},
 	"description": "zero language",
 	"copyright": "Copyright © 2018, Domain",

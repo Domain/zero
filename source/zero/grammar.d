@@ -134,7 +134,7 @@ void build(string moduleName = "zero.parser", string path = null)
                 'function' /
 			    'override' / 
                 'null' / 
-               'and' / 
+                'and' / 
                 'or' / 
                 'not' / 
                 'true' / 

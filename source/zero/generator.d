@@ -8,13 +8,14 @@ import std.conv;
 import std.traits : isSomeString;
 import std.container.slist;
 import zero.allocator;
+import zero.analyzer;
 import std.bitmanip;
 import msgpack;
 
 struct Generator
 {
 public:
-    this(ParseTree root)
+    this(SyntaxTree root)
 	{
         allocator = Allocator();
 		generate(root);
@@ -44,7 +45,7 @@ private:
         /* 20 */    PROC, RET, JMP, JEQ, JNE, 
         /* 25 */    LT, LE, EQ, NE, GT, 
         /* 30 */    GE, DATA, GET, TAB, ARRY,
-        /* 35 */    
+        /* 35 */    CODE,
     }
 
     struct R0
@@ -153,7 +154,7 @@ private:
         }
     }
 
-	void generate(ParseTree node)
+	void generate(SyntaxTree node)
 	{
 		switch (node.name)
 		{
@@ -212,7 +213,7 @@ private:
 		}
 	}
 
-    Register generateExpr(ParseTree node, Register reg = Register.Invalid)
+    Register generateExpr(SyntaxTree node, Register reg = Register.Invalid)
     {
         Register result;
 
@@ -335,7 +336,7 @@ private:
         return result;
     }
 
-    Register arrayExpr(ParseTree node, Register reg)
+    Register arrayExpr(SyntaxTree node, Register reg)
     {
         auto result = useOrNewReg(reg);
         emit(InstructionSet.ARRY, result, node.children.length);
@@ -348,7 +349,7 @@ private:
         return result;
     }
 
-    Register tableExpr(ParseTree node, Register reg)
+    Register tableExpr(SyntaxTree node, Register reg)
     {
         auto result = useOrNewReg(reg);
         emit(InstructionSet.TAB, result, node.children.length);
@@ -366,7 +367,7 @@ private:
         return result;
     }
 
-    Register assign(ParseTree node, Register reg)
+    Register assign(SyntaxTree node, Register reg)
     {
         auto result = generateExpr(node.children[0]);
         auto value = generateExpr(node.children[1], result);
@@ -375,7 +376,7 @@ private:
         return result;
     }
 
-    Register index(ParseTree node, Register reg)
+    Register index(SyntaxTree node, Register reg)
     {
         auto o = generateExpr(node.children[0], reg);
         auto i = generateExpr(node.children[1]);
@@ -384,7 +385,7 @@ private:
         return result;
     }
 
-    Register generateMember(ParseTree node, Register reg)
+    Register generateMember(SyntaxTree node, Register reg)
     {
         auto o = generateExpr(node.children[0], reg);
         auto f = allocator.AllocateLiteral(node.children[1].matches[0]);
@@ -422,7 +423,7 @@ private:
         return Register(literal.number, RegisterType.Literal);
     }
 
-    void generateBlock(ParseTree node)
+    void generateBlock(SyntaxTree node)
     {
         allocator.EnterScope();
         foreach (child; node.children)
@@ -432,7 +433,7 @@ private:
         allocator.LeaveScope();
     }
 
-    void generateVar(ParseTree node)
+    void generateVar(SyntaxTree node)
     {
         EVarScope varScope = EVarScope.Local;
 
@@ -454,7 +455,7 @@ private:
         }
     }
 
-    void generateIf(ParseTree node)
+    void generateIf(SyntaxTree node)
     {
         emitComment("----> if");
         // condition
@@ -532,7 +533,7 @@ private:
         }
     }
 
-    void generateRepeat(ParseTree node)
+    void generateRepeat(SyntaxTree node)
     {
         BackPatchHelper helper = BackPatchHelper("break", &this);
 
@@ -546,7 +547,7 @@ private:
         emitComment("<---- repeat");
     }
 
-    void generateWhile(ParseTree node)
+    void generateWhile(SyntaxTree node)
     {
         BackPatchHelper helper = BackPatchHelper("break", &this);
 
@@ -565,7 +566,7 @@ private:
         emitComment("<---- while");
     }
 
-    void generateFor(ParseTree node)
+    void generateFor(SyntaxTree node)
     {
         BackPatchHelper helper = BackPatchHelper("break", &this);
 
@@ -592,24 +593,24 @@ private:
         emitComment("<---- for");
     }
 
-    void generateForeach(ParseTree node)
+    void generateForeach(SyntaxTree node)
     {
         BackPatchHelper helper = BackPatchHelper("break", &this);
 
     }
 
-    void generateBreak(ParseTree node)
+    void generateBreak(SyntaxTree node)
     {
         BackPatchHelper.AddLocation(emitSkip(1));
     }
 
-    void generateContinue(ParseTree node)
+    void generateContinue(SyntaxTree node)
     {
         //emitRM_Abs("LDA", pc, beginLoc, "continue");
         emitAbs(InstructionSet.JMP, beginLoc);
     }
 
-    void generateReturn(ParseTree node)
+    void generateReturn(SyntaxTree node)
     {
         if (node.children.length > 0)
         {
@@ -623,7 +624,7 @@ private:
         //BackPatchHelper.AddLocation(emitSkip(1));
     }
 
-    void generateFunction(ParseTree node)
+    void generateFunction(SyntaxTree node)
     {
         BackPatchHelper helper = BackPatchHelper("return", &this);
 
@@ -655,7 +656,7 @@ private:
         allocator.LeaveFunction();
     }
 
-    Register generateCall(ParseTree node)
+    Register generateCall(SyntaxTree node)
     {
         auto result = allocator.AllocateRegister();
         auto f = generateExpr(node.children[0], result);
@@ -684,7 +685,7 @@ private:
         return result;
     }
 
-    Register generateTernary(ParseTree node, Register reg)
+    Register generateTernary(SyntaxTree node, Register reg)
     {
         auto result = reg == Register.Invalid ? allocator.AllocateRegister() : reg;
         auto cond = generateExpr(node.children[0]);
@@ -706,7 +707,7 @@ private:
         return result;
     }
 
-    Register generateBinary(ParseTree node, Register reg)
+    Register generateBinary(SyntaxTree node, Register reg)
     {
         auto lhs = generateExpr(node.children[0], reg);
         auto rhs = generateExpr(node.children[2]);
@@ -934,7 +935,7 @@ private:
     //}
 }
 
-void traverse(ParseTree node, void delegate(ParseTree) prevProc, void delegate(ParseTree) postProc)
+void traverse(SyntaxTree node, void delegate(SyntaxTree) prevProc, void delegate(SyntaxTree) postProc)
 {
 	prevProc(node);
 	foreach (child; node.children)
@@ -944,7 +945,7 @@ void traverse(ParseTree node, void delegate(ParseTree) prevProc, void delegate(P
 	postProc(node);
 }
 
-string generate(ParseTree node)
+string generate(SyntaxTree node)
 {
 	Generator generator = Generator(node);
 	return generator.source;

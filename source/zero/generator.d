@@ -18,8 +18,13 @@ public:
     this(SyntaxTree root)
 	{
         allocator = Allocator();
+        auto code = emitSkip(1);
 		generate(root);
+        auto end = emitSkip(0);
 		emit(InstructionSet.HALT);
+        emitBackup(code);
+        emit(InstructionSet.CODE, end);
+        emitRestore();
         generateData();
 	}
 
@@ -248,6 +253,7 @@ private:
                 break;
 
 			case "Zero.VarIdentifier":
+			case "Zero.Symbol":
                 auto var = allocator.FindVariable(node.matches[0]);
                 if (var !is null)
                     result = var.toRegister();
@@ -445,7 +451,7 @@ private:
         foreach (decl; node.children)
         {
             auto var = allocator.AllocateVariable(decl.matches[0], varScope);
-            if (decl.name == "Zero.VarExpression")
+            if (decl.name == "Zero.VarDeclaration")
             {
                 auto value = generateExpr(decl.children[1], var.toRegister());
                 if (value.type == RegisterType.Literal ||
@@ -459,7 +465,17 @@ private:
     {
         emitComment("----> if");
         // condition
-        auto cond = generateExpr(node.children[0]);
+        Register cond;
+
+        if (node.children[0].node.name == "Zero.Condition")
+        {
+            generate(node.children[0].children[0]);
+            cond = generateExpr(node.children[0].children[1]);
+        }
+        else
+        {
+            cond = generateExpr(node.children[0]);
+        }
 
         // then location, reserve loc for jump to else
         auto jmp2Else = emitSkip(1);
@@ -915,14 +931,14 @@ private:
 
     void emitAbs(O, R)(O op, R r, int loc)
     {
-        auto addr = format("%d(%d)", loc - (emitLoc + 1), RegisterType.Literal);
+        auto addr = format("%d(%s)", loc - (emitLoc + 1), RegisterType.Literal);
         emit(op, r, addr);
         appendComment("%d", loc);
     }
 
     void emitAbs(O)(O op, int loc)
     {
-        auto addr = format("%d(%d)", loc - (emitLoc + 1), RegisterType.Literal);
+        auto addr = format("%d(%s)", loc - (emitLoc + 1), RegisterType.Literal);
         emit(op, addr);
         appendComment("%d", loc);
     }

@@ -144,6 +144,22 @@ private void buildTables(SyntaxTree node, SymbolTableStack stack)
             stack.popBlock();
             break;
 
+        case "Zero.IfStatement":
+            if (node.children[0].node.name == "Zero.Condition")
+            {
+                stack.pushBlock();
+                foreach (child; node.children)
+                {
+                    buildTables(child, stack);
+                }
+                stack.popBlock();
+            }
+            else
+            {
+                goto default;
+            }
+            break;
+
         case "Zero.VarStatement":
         case "Zero.ConstStatement":
             foreach (child; node.children)

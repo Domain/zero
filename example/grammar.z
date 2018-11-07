@@ -1,6 +1,13 @@
 1+2-3/4;
 123*(4567890-1);
-if true then 
-    var a := 1; 
+var a:= 1;
+if a=2 then 
+    a := a+1; 
 else
-    var b := "abc";
+    a:=a*2;
+if(var b:=a;b!=0)then
+    b:=a/b;
+var b:=4567890;
+while b>0 do
+    b:=b-1;
+

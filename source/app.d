@@ -4,7 +4,7 @@ import zero.grammar;
 import zero.parser;
 import zero.analyzer;
 import zero.generator;
-import deimos.linenoise;
+//import deimos.linenoise;
 
 string help(string program, GetoptResult result)
 {
@@ -27,21 +27,25 @@ string help(string program, GetoptResult result)
     return usage;
 }
 
-void parse(string code)
+void parse(string code, bool verbose)
 {
     writefln("code: %s", code);
-    foreach (dchar c; code)
-        writef("%x ", c);
     writeln();
     auto pt = Zero(code);
     if (!pt.successful)
 	    writeln(pt.failMsg);
-    else
+    else if (verbose)
 	    writeln(pt.matches);
-    writeln(pt);
-    writeln();
+    if (verbose)
+    {
+        writeln(pt);
+        writeln();
+    }
     auto syntaxTree = buildSyntaxTree(pt.dup);
-    writeln(syntaxTree);
+    if (verbose)
+    {
+        writeln(syntaxTree);
+    }
     // auto simplified = simplifyParseTree(pt.dup);
     // writeln(simplified);
     writeln();
@@ -84,18 +88,19 @@ int main(string[] args)
 
         auto inputs = args[1..$];
         foreach (f; inputs)
-            parse(f.readText);
+            parse(f.readText, verbose);
 
         return 0;
     }
 
-    linenoiseHistoryLoad("history.txt");
+    //linenoiseHistoryLoad("history.txt");
 
     import std.array : appender;
+    import core.stdc.stdlib;
     auto code = appender!string();
 
     auto done = false;
-    char* line = null;
+    /*char* line = null;
 
 	while((line = linenoise("Z> ")) !is null) 
     {
@@ -106,14 +111,15 @@ int main(string[] args)
         }
         else
         {
-            code ~= line;
-            linenoiseHistoryAdd(line); /* Add to the history. */
-            linenoiseHistorySave("history.txt"); /* Save the history on disk. */
+            import std.string : fromStringz;
+            code ~= line.fromStringz;
+            linenoiseHistoryAdd(line);
+            linenoiseHistorySave("history.txt");
         }
         free(line);
-    }
+    }*/
 
-    /*while (!done)
+    while (!done)
     {
         auto line = readln();
         if (line is null)
@@ -122,15 +128,15 @@ int main(string[] args)
         }
         else if (line == "\n")
         {
-            parse(code.data);
+            parse(code.data, verbose);
             code = appender!string();
         }
         else
         {
-            history ~= line;
+            //history ~= line;
             code ~= line;
         }
-    }*/
+    }
 
     return 0;
 }

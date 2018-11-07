@@ -29,10 +29,10 @@ class Variable
     {
         if (varScope == EVarScope.Local)
         {
-            return format("%d(%d)", offset, RegisterType.Local);
+            return format("%d(%s)", offset, RegisterType.Local);
         }
 
-        return format("%d(%d)", offset, RegisterType.Global);
+        return format("%d(%s)", offset, RegisterType.Global);
     }
 
     Register toRegister()
@@ -61,7 +61,7 @@ struct Register
 
     string toString()
     {
-        return format("%d(%d)", offset, type);
+        return format("%d(%s)", offset, type);
     }
 }
 

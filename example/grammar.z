@@ -10,4 +10,15 @@ if(var b:=a;b!=0)then
 var b:=4567890;
 while b>0 do
     b:=b-1;
-
+var if := true;
+if if then
+    if := false;
+repeat
+    b := b + 1;
+until if;
+var english := "this is";
+for (var f:=0; f<100; f:=f+1) do
+    b:=b-1;
+//var 中文 := "这是中文";
+var c := [1];
+c[0] := 123;

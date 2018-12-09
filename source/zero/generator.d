@@ -454,8 +454,9 @@ private:
             if (decl.name == "Zero.VarDeclaration")
             {
                 auto value = generateExpr(decl.children[1], var.toRegister());
-                if (value.type == RegisterType.Literal ||
-                    value.type == RegisterType.Const)
+                if (var != value)
+                //if (value.type == RegisterType.Literal ||
+                //    value.type == RegisterType.Const)
                     emit(InstructionSet.MOV, var, value);
             }
         }
@@ -599,7 +600,7 @@ private:
         auto jmp2EndLoc = emitSkip(1);
         generate(stmt);
         if (cond.children.length > 2)
-            generate(cond.children[2]);
+            generateExpr(cond.children[2]);
         emitAbs(InstructionSet.JMP, beginLoc);
         endLoc = emitSkip(0);
         emitBackup(jmp2EndLoc);

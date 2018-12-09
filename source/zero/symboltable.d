@@ -5,8 +5,7 @@ import pegged.peg;
 class Symbol
 {
     string name;
-    Position[] positions;
-    SymbolTable table;
+    Position[] positions; SymbolTable table;
     int offset;
 }
 
@@ -22,7 +21,7 @@ class SymbolTable
 
     Symbol enter(string name)
     {
-        assert(lookup(name) is null);
+        assert(lookup(name) is null, "duplicate " ~ name ~ " found");
         auto symbol = new Symbol();
         symbol.name = name;
         symbol.table = this;

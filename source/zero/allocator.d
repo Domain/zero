@@ -35,7 +35,7 @@ class Variable
         return format("%d(%s)", offset, RegisterType.Global);
     }
 
-    Register toRegister()
+    @property Register toRegister() const
     {
         Register r;
         r.offset = offset;
@@ -44,6 +44,13 @@ class Variable
         else
             r.type = RegisterType.Global;
         return r;
+    }
+
+    alias toRegister this;
+
+    bool opEquals()(auto ref const Register rhs) const
+    {
+        return toRegister() == rhs;
     }
 }
 
@@ -62,6 +69,11 @@ struct Register
     string toString()
     {
         return format("%d(%s)", offset, type);
+    }
+
+    bool opEquals()(auto ref const Register rhs) const
+    {
+        return offset == rhs.offset && type == rhs.type;
     }
 }
 

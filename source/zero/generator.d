@@ -3,7 +3,7 @@ module zero.generator;
 import pegged.peg;
 import std.array : join;
 import std.format : format;
-import std.stdio : writeln;
+import std.stdio : writeln, writefln;
 import std.conv;
 import std.traits : isSomeString;
 import std.container.slist;
@@ -26,6 +26,17 @@ public:
         emit(InstructionSet.CODE, end);
         emitRestore();
         generateData();
+
+        Instruction64 ins;
+        ins.code = InstructionSet.MOV;
+        ins.operand = 112233;
+        writefln("size = %s", ins.sizeof);
+        writefln("operand = %b", ins.operand);
+        writefln("value = %b", ins.value);
+        writefln("instruction = %s", ins.instruction);
+        writefln("op = %s", ins.op);
+
+        writefln("code = %s", Instruction64.code.offsetof);
 	}
 
     @property string source()
@@ -42,7 +53,7 @@ private:
 	static immutable int ac1 = 1;
 	static immutable string[] reg = ["AX", "BX", "CX", "DX", "SP", "GP", "MP", "PC"];
 
-    enum InstructionSet
+    enum InstructionSet : ubyte
     {
         /*  5 */    HALT = 0, ADD, SUB, MUL, DIV, 
         /* 10 */    MOD, POW, NEG, CAT, IN,
@@ -50,7 +61,31 @@ private:
         /* 20 */    PROC, RET, JMP, JEQ, JNE, 
         /* 25 */    LT, LE, EQ, NE, GT, 
         /* 30 */    GE, DATA, GET, TAB, ARRY,
-        /* 35 */    CODE,
+        /* 35 */    CODE, MOVA, MOVT
+    }
+
+    union Instruction64
+    {
+        ulong instruction;
+        struct
+        {
+            union
+            {
+                uint operand;
+                struct
+                {
+                    ushort cx;
+                    ushort bx;
+                }
+            }
+            ushort ax;
+            mixin(bitfields!(ubyte, "eax", 2,
+                             ubyte, "ebx", 3,
+                             ubyte, "ecx", 3));
+            InstructionSet code;
+        }
+        mixin(bitfields!(ulong, "value", 56,
+                         ulong, "op", 8));
     }
 
     struct R0
@@ -118,6 +153,7 @@ private:
 	int tmpOffset = 0;
 
     string[] buffers;
+    ulong[] codes;
 
     Allocator allocator;
 

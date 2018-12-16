@@ -34,126 +34,7 @@ public:
     }
 
 private:
-    enum InstructionSet : ubyte
-    {
-        /*  5 */    HALT = 0, ADD, SUB, MUL, DIV, 
-        /* 10 */    MOD, POW, NEG, CAT, IN,
-        /* 15 */    AND, OR, NOT, MOV, CALL, 
-        /* 20 */    PROC, RET, JMP, JEQ, JNE, 
-        /* 25 */    LT, LE, EQ, NE, GT, 
-        /* 30 */    GE, DATA, GET, TAB, ARRY,
-        /* 35 */    CODE, MOVA, MOVT
-    }
-
-    struct RA
-    {
-        mixin(bitfields!(
-            ushort, "", 16,
-            ushort, "", 16,
-            ushort, "value", 16,
-            ubyte, "type", 2,
-            ubyte, "", 3,
-            ubyte, "", 3,
-            ubyte, "", 8,
-        ));
-    }
-
-    struct RB
-    {
-        mixin(bitfields!(
-            ushort, "", 16,
-            ushort, "value", 16,
-            ushort, "", 16,
-            ubyte, "", 2,
-            ubyte, "type", 3,
-            ubyte, "", 3,
-            ubyte, "", 8,
-        ));
-    }
-
-    struct RC
-    {
-        mixin(bitfields!(
-            ushort, "value", 16,
-            ushort, "", 16,
-            ushort, "", 16,
-            ubyte, "", 2,
-            ubyte, "", 3,
-            ubyte, "type", 3,
-            ubyte, "", 8,
-        ));
-    }
-
-    struct RD
-    {
-        mixin(bitfields!(
-            uint, "value", 32,
-            ushort, "", 16,
-            ubyte, "", 2,
-            ubyte, "type", 6,
-            ubyte, "", 8,
-        ));
-    }
-
-    struct RE
-    {
-        mixin(bitfields!(
-            ulong, "value", 56,
-            ubyte, "", 8,
-        ));
-    }
-
-    union Instruction64
-    {
-        ulong code;
-
-        RA ax;
-        RB bx;
-        RC cx;
-        RD dx;
-        RE ex;
-
-        mixin(bitfields!(
-            ulong, "", 56,
-            ulong, "op", 8)
-        );
-    }
-
-    struct R0
-    {
-        mixin(bitfields!(
-                         InstructionSet, "op", 6,
-                         uint, "ax", 26));
-    }
-
-    struct R1
-    {
-        mixin(bitfields!(
-                         InstructionSet, "op", 6,
-                         uint, "a",  7,
-                         RegisterType, "ar", 1,
-                         uint, "bx", 18));
-    }
-
-    struct R3
-    {
-        mixin(bitfields!(
-                         InstructionSet, "op", 6,
-                         uint, "a",  7,
-                         RegisterType, "ar", 1,
-                         uint, "b",  7,
-                         RegisterType, "br", 2,
-                         uint, "c",  7,
-                         RegisterType, "cr", 2));
-    }
-
-    union Instruction
-    {
-        uint instruction;
-        R0 r0;
-        R1 r1;
-        R3 r3;
-    }
+    
 
     enum LiteralType
     {
@@ -946,6 +827,9 @@ private:
         }
 
         codes[emitLoc] = code;
+
+        emitLoc++;
+        updateHighEmitLoc();
     }
 
     void emitCode(Char, A...)(in Char[] fmt, A args)
@@ -955,41 +839,6 @@ private:
         emitLoc++;
         updateHighEmitLoc();
 	}
-
-    //void emitRO(string op)
-    //{
-    //    emitCode("%5s");
-    //}
-    //
-    //void emitRO(string op, int r, int s, int t)
-    //{
-    //    emitCode("%5s %s, %s, %s", op, r, s, t);
-    //    //updateHighEmitLoc();
-    //}
-    //
-    //void emitRO(Char, A...)(string op, int r, int s, int t, in Char[] fmt, A args)
-    //{
-    //    emitRO(op, r, s, t);
-    //    appendComment(fmt, args);
-    //}
-    //
-    //void emitRM(T)(string op, int r, T d, int s) if (!isSomeString!T)
-    //{
-    //    emitCode("%5s %s, %s(%s)", op, r, d, s);
-    //    //updateHighEmitLoc();
-    //}
-    //
-    //void emitRM(T)(string op, int r, T d, int s) if (isSomeString!T)
-    //{
-    //    emitCode("%5s %s, \"%s\"(%s)", op, r, d, s);
-    //    //updateHighEmitLoc();
-    //}
-    //
-    //void emitRM(T, Char, A...)(string op, int r, T d, int s, in Char[] fmt, A args)
-    //{
-    //    emitRM(op, r, d, s);
-    //    appendComment(fmt, args);
-    //}
 
 	int emitSkip(int howMany)
 	{

@@ -26,17 +26,6 @@ public:
         emit(InstructionSet.CODE, end);
         emitRestore();
         generateData();
-
-        Instruction64 ins;
-        ins.code = InstructionSet.MOV;
-        ins.operand = 112233;
-        writefln("size = %s", ins.sizeof);
-        writefln("operand = %b", ins.operand);
-        writefln("value = %b", ins.value);
-        writefln("instruction = %s", ins.instruction);
-        writefln("op = %s", ins.op);
-
-        writefln("code = %s", Instruction64.code.offsetof);
 	}
 
     @property string source()
@@ -45,14 +34,6 @@ public:
     }
 
 private:
-	static immutable int registerCount = 8;
-	static immutable int pc = registerCount - 1;
-	static immutable int mp = registerCount - 2;
-	static immutable int gp = registerCount - 3;
-	static immutable int ac = 0;
-	static immutable int ac1 = 1;
-	static immutable string[] reg = ["AX", "BX", "CX", "DX", "SP", "GP", "MP", "PC"];
-
     enum InstructionSet : ubyte
     {
         /*  5 */    HALT = 0, ADD, SUB, MUL, DIV, 
@@ -79,11 +60,16 @@ private:
                 }
             }
             ushort ax;
-            mixin(bitfields!(ubyte, "eax", 2,
-                             ubyte, "ebx", 3,
-                             ubyte, "ecx", 3));
+            union
+            {
+                ushort flags;
+                mixin(bitfields!(ubyte, "eax", 2,
+                                 ubyte, "ebx", 3,
+                                 ubyte, "ecx", 3));
+            }
             InstructionSet code;
         }
+
         mixin(bitfields!(ulong, "value", 56,
                          ulong, "op", 8));
     }

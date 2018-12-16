@@ -45,33 +45,78 @@ private:
         /* 35 */    CODE, MOVA, MOVT
     }
 
+    struct RA
+    {
+        mixin(bitfields!(
+            ushort, "", 16,
+            ushort, "", 16,
+            ushort, "value", 16,
+            ubyte, "type", 2,
+            ubyte, "", 3,
+            ubyte, "", 3,
+            ubyte, "", 8,
+        ));
+    }
+
+    struct RB
+    {
+        mixin(bitfields!(
+            ushort, "", 16,
+            ushort, "value", 16,
+            ushort, "", 16,
+            ubyte, "", 2,
+            ubyte, "type", 3,
+            ubyte, "", 3,
+            ubyte, "", 8,
+        ));
+    }
+
+    struct RC
+    {
+        mixin(bitfields!(
+            ushort, "value", 16,
+            ushort, "", 16,
+            ushort, "", 16,
+            ubyte, "", 2,
+            ubyte, "", 3,
+            ubyte, "type", 3,
+            ubyte, "", 8,
+        ));
+    }
+
+    struct RD
+    {
+        mixin(bitfields!(
+            uint, "value", 32,
+            ushort, "", 16,
+            ubyte, "", 2,
+            ubyte, "type", 6,
+            ubyte, "", 8,
+        ));
+    }
+
+    struct RE
+    {
+        mixin(bitfields!(
+            ulong, "value", 56,
+            ubyte, "", 8,
+        ));
+    }
+
     union Instruction64
     {
-        ulong instruction;
-        struct
-        {
-            union
-            {
-                uint operand;
-                struct
-                {
-                    ushort cx;
-                    ushort bx;
-                }
-            }
-            ushort ax;
-            union
-            {
-                ushort flags;
-                mixin(bitfields!(ubyte, "eax", 2,
-                                 ubyte, "ebx", 3,
-                                 ubyte, "ecx", 3));
-            }
-            InstructionSet code;
-        }
+        ulong code;
 
-        mixin(bitfields!(ulong, "value", 56,
-                         ulong, "op", 8));
+        RA ax;
+        RB bx;
+        RC cx;
+        RD dx;
+        RE ex;
+
+        mixin(bitfields!(
+            ulong, "", 56,
+            ulong, "op", 8)
+        );
     }
 
     struct R0
@@ -884,9 +929,23 @@ private:
         emitCode("%5s %s", op, r);
     }
 
-    void emit(O)(O op)
+    void emit(InstructionSet op)
     {
+        Instruction64 ins;
+        ins.op = op;
+        emitCode(ins);
+
         emitCode("%5s", op);
+    }
+
+    void emitCode(Instruction64 code)
+    {
+        if (emitLoc + 1 > codes.length)
+        {
+            codes.length = emitLoc + 1;
+        }
+
+        codes[emitLoc] = code;
     }
 
     void emitCode(Char, A...)(in Char[] fmt, A args)

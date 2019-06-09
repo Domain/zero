@@ -1,15 +1,28 @@
 {
-	"name": "zero",
-	"authors": [
-		"Domain"
-	],
-	"dependencies": {
-		"pegged": "~>0.4.4",
-		"msgpack-d": "~>1.0.0-beta.7"
-	},
-	"description": "zero language",
-	"copyright": "Copyright © 2018, Domain",
-	"license": "proprietary",
-	"targetPath": "./bin",
-	"libs-windows": ["Ws2_32"]
+    "authors": [
+        "Domain"
+    ],
+    "copyright": "Copyright © 2019, Domain",
+    "description": "ZERO framework",
+    "license": "proprietary",
+    "name": "zero",
+    "targetType": "none",
+    "dependencies": {
+        "zero:loader": "*",
+        "zero:host": "*",
+        "zero:libzero": "*",
+        "zero:zc": "*"
+    },
+    "subPackages": [
+        "./source/loader/",
+        "./source/host/",
+        "./source/libzero/",
+        "./source/zc/"
+    ],
+    "preGenerateCommands-windows": [
+        "cd \"$ROOT_PACKAGE_DIR\\source\\plugins\" & $DUB build"
+    ],
+    "preGenerateCommands-linux": [
+        "cd \"$ROOT_PACKAGE_DIR/source/plugins\" && $DUB build"
+    ]
 }

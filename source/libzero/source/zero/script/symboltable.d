@@ -1,4 +1,4 @@
-module zero.symboltable;
+module zero.script.symboltable;
 
 import pegged.peg;
 

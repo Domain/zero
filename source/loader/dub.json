@@ -1,0 +1,15 @@
+{
+    "authors": [
+        "Domain"
+    ],
+    "copyright": "Copyright © 2019, Domain",
+    "description": "ZERO framework loader",
+    "license": "proprietary",
+    "name": "loader",
+    "targetName": "loader",
+    "targetType": "executable",
+    "targetPath": "$ROOT_PACKAGE_DIR/bin",
+    "dependencies": {
+        "zero:libzero": "*"
+    }
+}

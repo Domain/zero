@@ -1,4 +1,4 @@
-module zero.allocator;
+module zero.script.allocator;
 
 import std.container.slist;
 import std.array;

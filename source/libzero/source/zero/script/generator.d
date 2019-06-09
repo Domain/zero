@@ -1,4 +1,4 @@
-module zero.generator;
+module zero.script.generator;
 
 import pegged.peg;
 import std.array : join;
@@ -7,8 +7,8 @@ import std.stdio : writeln, writefln;
 import std.conv;
 import std.traits : isSomeString;
 import std.container.slist;
-import zero.allocator;
-import zero.analyzer;
+import zero.script.allocator;
+import zero.script.analyzer;
 import std.bitmanip;
 import msgpack;
 

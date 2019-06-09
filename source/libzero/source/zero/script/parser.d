@@ -147,7 +147,7 @@ This module was automatically generated from the following grammar:
 		
 
 +/
-module zero.parser;
+module zero.script.parser;
 
 public import pegged.peg;
 import std.algorithm: startsWith;

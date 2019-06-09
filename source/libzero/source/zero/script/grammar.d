@@ -1,8 +1,8 @@
-module zero.grammar;
+module zero.script.grammar;
 
 import pegged.grammar;
 
-void build(string moduleName = "zero.parser", string path = null)
+void build(string moduleName = "zero.script.parser", string path = null)
 {
 	enum zeroGrammar = `
 	Zero:

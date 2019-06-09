@@ -1,3 +1,3 @@
 # zero
-Z programming language
+ZERO framework
 

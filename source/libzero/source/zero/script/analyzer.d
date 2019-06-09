@@ -1,10 +1,10 @@
-module zero.analyzer;
+module zero.script.analyzer;
 
 import std.stdio;
 import std.conv : to;
 import std.array : appender;
 import pegged.peg : ParseTree, position;
-import zero.symboltable;
+import zero.script.symboltable;
 
 class SyntaxTree
 {

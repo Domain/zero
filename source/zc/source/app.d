@@ -1,9 +1,9 @@
 import std.stdio;
 import std.getopt;
-import zero.grammar;
-import zero.parser;
-import zero.analyzer;
-import zero.generator;
+import zero.script.grammar;
+import zero.script.parser;
+import zero.script.analyzer;
+import zero.script.generator;
 //import deimos.linenoise;
 
 string help(string program, GetoptResult result)
